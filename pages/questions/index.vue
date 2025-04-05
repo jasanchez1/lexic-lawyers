@@ -79,7 +79,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useQuestions } from '~/composables/useQuestions'
-import { useLawyerProfile } from '~/composables/useLawyerProfile'
+import { useProfile } from '~/composables/useProfile'
 
 definePageMeta({
     middleware: ['lawyer-auth']
@@ -106,7 +106,7 @@ const {
 } = useQuestions()
 
 // Get lawyer profile to know their practice areas
-const { profile, fetchProfile } = useLawyerProfile()
+const { profile, fetchProfile } = useProfile()
 
 // Computed property for practice areas
 const practiceAreas = computed(() => {

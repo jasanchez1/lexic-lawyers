@@ -27,3 +27,36 @@
     @apply block text-sm font-medium text-gray-700 mb-1;
   }
 }
+
+/* Layout adjustments */
+.main-layout {
+  padding-left: 16rem; /* 64px = sidebar width */
+}
+
+.main-layout.sidebar-collapsed {
+  padding-left: 5rem; /* 20px = collapsed sidebar width */
+}
+
+/* Make sure the main content stays below the fixed header */
+main {
+  margin-top: 4rem; /* 64px = header height */
+}
+
+/* Fix z-index issues */
+.sidebar {
+  z-index: 50;
+}
+
+.header {
+  z-index: 40;
+}
+
+/* Transitions */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.2s;
+}
+.page-enter-from,
+.page-leave-to {
+  opacity: 0;
+}

@@ -66,6 +66,9 @@ const props = defineProps({
 
 // Format value (add thousands separators)
 const formattedValue = computed(() => {
+    if (props.value === undefined || props.value === null) {
+        return '0';
+    }
     if (typeof props.value === 'number') {
         return props.value.toLocaleString()
     }

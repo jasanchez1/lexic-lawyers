@@ -431,7 +431,7 @@
     Star, Mail, Phone, MapPin, Briefcase, 
     GraduationCap, Award, Trash2 
   } from 'lucide-vue-next'
-  import { useLawyerProfile } from '~/composables/useLawyerProfile'
+  import { useProfile } from '~/composables/useProfile'
   import { useNotifications } from '~/composables/useNotifications'
   import { usePracticeAreas } from '~/composables/usePracticeAreas'
   
@@ -442,7 +442,7 @@
   // State
   const editMode = ref(false)
   const isSubmitting = ref(false)
-  const { profile, isLoading, error, fetchProfile, updateProfile } = useLawyerProfile()
+  const { profile, isLoading, error, fetchProfile, updateProfile } = useProfile()
   const { success, error: showError } = useNotifications()
   const { practiceAreas } = usePracticeAreas()
   

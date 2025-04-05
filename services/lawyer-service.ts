@@ -1,166 +1,205 @@
-import { ApiService } from './api'
+import { ApiService } from "./api";
+import type { Lawyer } from "~/types/lawyer";
 
-export class QuestionsService extends ApiService {
-  async getQuestions(params: any = {}) {
-    const queryParams = new URLSearchParams()
-    
-    if (params.status) {
-      if (params.status === 'unanswered') {
-        // Specific query for unanswered questions
-        queryParams.append('answered', 'false')
-      } else if (params.status === 'answered') {
-        queryParams.append('answered', 'true')
-      }
-    }
-    
-    if (params.area) {
-      queryParams.append('area', params.area)
-    }
-    
-    if (params.page) {
-      queryParams.append('page', params.page.toString())
-    }
-    
-    if (params.size) {
-      queryParams.append('size', params.size.toString())
-    }
-    
-    // For development, return mock data
-    // In production, use:
-    // return this.request(`/questions?${queryParams.toString()}`, 'GET')
-    
-    // Mock data
-    return {
-      questions: [
-        {
-          id: '1',
-          title: '¿Cómo puedo realizar una posesión efectiva?',
-          content: 'Necesito realizar una posesión efectiva debido al fallecimiento de mi padre. ¿Cuál es el procedimiento y qué documentos necesito?',
-          date: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-          location: 'Santiago',
-          viewCount: 45,
-          answerCount: 2,
-          topics: [
-            { id: '1', name: 'Herencias', slug: 'herencias' },
-            { id: '2', name: 'Posesión Efectiva', slug: 'posesion-efectiva' }
-          ],
-          planToHire: 'yes'
-        },
-        {
-          id: '2',
-          title: 'Problema con contrato de arriendo',
-          content: 'Mi arrendador quiere subir el precio del arriendo en más de un 20% y dice que si no acepto tendré que irme. ¿Es esto legal? ¿Qué puedo hacer?',
-          date: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-          location: 'Viña del Mar',
-          viewCount: 32,
-          answerCount: 0,
-          topics: [
-            { id: '3', name: 'Arrendamiento', slug: 'arrendamiento' },
-            { id: '4', name: 'Contratos', slug: 'contratos' }
-          ],
-          planToHire: 'maybe'
-        },
-        {
-          id: '3',
-          title: 'Demanda por deuda impaga',
-          content: 'Un cliente no me ha pagado por servicios profesionales realizados hace más de 6 meses. ¿Cómo puedo proceder con una demanda por deuda impaga?',
-          date: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-          location: 'Concepción',
-          viewCount: 17,
-          answerCount: 1,
-          topics: [
-            { id: '5', name: 'Cobranza', slug: 'cobranza' },
-            { id: '6', name: 'Procedimientos Judiciales', slug: 'procedimientos-judiciales' }
-          ],
-          planToHire: 'yes'
-        }
-      ],
-      total: 28,
-      page: params.page || 1,
-      size: params.size || 10,
-      pages: Math.ceil(28 / (params.size || 10))
+export class LawyerService extends ApiService {
+  async getLawyerProfile(lawyerId?: string) {
+    // Default to user's own lawyer profile if no ID provided
+    const endpoint = lawyerId ? `/lawyers/${lawyerId}` : "/auth/me/lawyer";
+
+    try {
+      return this.request(endpoint, "GET");
+    } catch (error) {
+      console.error("Error fetching lawyer profile:", error);
+      throw error;
     }
   }
-  
-  async getQuestion(id: string) {
-    // For development, return mock data
-    // In production, use:
-    // return this.request(`/questions/${id}`, 'GET')
-    
-    // Mock data based on ID
-    const mockQuestions = {
-      '1': {
-        id: '1',
-        title: '¿Cómo puedo realizar una posesión efectiva?',
-        content: 'Necesito realizar una posesión efectiva debido al fallecimiento de mi padre. ¿Cuál es el procedimiento y qué documentos necesito?',
-        date: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-        location: 'Santiago',
-        viewCount: 45,
-        answerCount: 2,
-        topics: [
-          { id: '1', name: 'Herencias', slug: 'herencias' },
-          { id: '2', name: 'Posesión Efectiva', slug: 'posesion-efectiva' }
-        ],
-        planToHire: 'yes',
-        author: {
-          name: 'Juan Pérez',
-          location: 'Santiago'
-        }
-      },
-      '2': {
-        id: '2',
-        title: 'Problema con contrato de arriendo',
-        content: 'Mi arrendador quiere subir el precio del arriendo en más de un 20% y dice que si no acepto tendré que irme. El contrato de arriendo que firmamos es por un año y llevo 8 meses viviendo en el departamento. ¿Es legal esta alza tan drástica? ¿Qué derechos tengo como arrendatario?',
-        date: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-        location: 'Viña del Mar',
-        viewCount: 32,
-        answerCount: 0,
-        topics: [
-          { id: '3', name: 'Arrendamiento', slug: 'arrendamiento' },
-          { id: '4', name: 'Contratos', slug: 'contratos' }
-        ],
-        planToHire: 'maybe',
-        author: {
-          name: 'María González',
-          location: 'Viña del Mar'
-        }
-      },
-      '3': {
-        id: '3',
-        title: 'Demanda por deuda impaga',
-        content: 'Un cliente no me ha pagado por servicios profesionales realizados hace más de 6 meses. He intentado contactarlo múltiples veces, le he enviado recordatorios de pago y finalmente una carta de cobro formal, pero sigue sin responder. El monto adeudado es de $1.500.000. ¿Cómo puedo proceder con una demanda por deuda impaga?',
-        date: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-        location: 'Concepción',
-        viewCount: 17,
-        answerCount: 1,
-        topics: [
-          { id: '5', name: 'Cobranza', slug: 'cobranza' },
-          { id: '6', name: 'Procedimientos Judiciales', slug: 'procedimientos-judiciales' }
-        ],
-        planToHire: 'yes',
-        author: {
-          name: 'Carlos Rodríguez',
-          location: 'Concepción'
-        }
-      }
+
+  async updateLawyerProfile(lawyerId: string, data: any) {
+    try {
+      return this.request(`/lawyers/${lawyerId}`, "PATCH", data);
+    } catch (error) {
+      console.error("Error updating lawyer profile:", error);
+      throw error;
     }
-    
-    // Return the question or throw error if not found
-    if (mockQuestions[id]) {
-      return mockQuestions[id]
-    } else {
-      throw new Error('Pregunta no encontrada')
+  }
+
+  async getLawyerExperience(lawyerId: string) {
+    try {
+      return this.request(`/lawyers/${lawyerId}/experience`, "GET");
+    } catch (error) {
+      console.error("Error fetching lawyer experience:", error);
+      throw error;
+    }
+  }
+
+  async getLawyerReviews(lawyerId: string) {
+    try {
+      return this.request(`/lawyers/${lawyerId}/reviews`, "GET");
+    } catch (error) {
+      console.error("Error fetching lawyer reviews:", error);
+      throw error;
+    }
+  }
+
+  async replyToReview(
+    lawyerId: string,
+    reviewId: string,
+    data: { content: string }
+  ) {
+    try {
+      return this.request(
+        `/lawyers/${lawyerId}/reviews/${reviewId}`,
+        "PATCH",
+        data
+      );
+    } catch (error) {
+      console.error("Error replying to review:", error);
+      throw error;
+    }
+  }
+
+  // Education endpoints
+
+  async createLawyerEducation(lawyerId: string, data: any) {
+    try {
+      return this.request(`/lawyers/${lawyerId}/education`, "POST", data);
+    } catch (error) {
+      console.error("Error creating lawyer education:", error);
+      throw error;
+    }
+  }
+
+  async updateLawyerEducation(
+    lawyerId: string,
+    educationId: string,
+    data: any
+  ) {
+    try {
+      return this.request(
+        `/lawyers/${lawyerId}/education/${educationId}`,
+        "PATCH",
+        data
+      );
+    } catch (error) {
+      console.error("Error updating lawyer education:", error);
+      throw error;
+    }
+  }
+
+  async deleteLawyerEducation(lawyerId: string, educationId: string) {
+    try {
+      return this.request(
+        `/lawyers/${lawyerId}/education/${educationId}`,
+        "DELETE"
+      );
+    } catch (error) {
+      console.error("Error deleting lawyer education:", error);
+      throw error;
+    }
+  }
+
+  // Work experience endpoints
+
+  async createLawyerWorkExperience(lawyerId: string, data: any) {
+    try {
+      return this.request(`/lawyers/${lawyerId}/work-experience`, "POST", data);
+    } catch (error) {
+      console.error("Error creating lawyer work experience:", error);
+      throw error;
+    }
+  }
+
+  async updateLawyerWorkExperience(
+    lawyerId: string,
+    experienceId: string,
+    data: any
+  ) {
+    try {
+      return this.request(
+        `/lawyers/${lawyerId}/work-experience/${experienceId}`,
+        "PATCH",
+        data
+      );
+    } catch (error) {
+      console.error("Error updating lawyer work experience:", error);
+      throw error;
+    }
+  }
+
+  async deleteLawyerWorkExperience(lawyerId: string, experienceId: string) {
+    try {
+      return this.request(
+        `/lawyers/${lawyerId}/work-experience/${experienceId}`,
+        "DELETE"
+      );
+    } catch (error) {
+      console.error("Error deleting lawyer work experience:", error);
+      throw error;
+    }
+  }
+
+  // Achievements endpoints
+
+  async createLawyerAchievement(lawyerId: string, data: any) {
+    try {
+      return this.request(`/lawyers/${lawyerId}/achievements`, "POST", data);
+    } catch (error) {
+      console.error("Error creating lawyer achievement:", error);
+      throw error;
+    }
+  }
+
+  async updateLawyerAchievement(
+    lawyerId: string,
+    achievementId: string,
+    data: any
+  ) {
+    try {
+      return this.request(
+        `/lawyers/${lawyerId}/achievements/${achievementId}`,
+        "PATCH",
+        data
+      );
+    } catch (error) {
+      console.error("Error updating lawyer achievement:", error);
+      throw error;
+    }
+  }
+
+  async deleteLawyerAchievement(lawyerId: string, achievementId: string) {
+    try {
+      return this.request(
+        `/lawyers/${lawyerId}/achievements/${achievementId}`,
+        "DELETE"
+      );
+    } catch (error) {
+      console.error("Error deleting lawyer achievement:", error);
+      throw error;
+    }
+  }
+
+  // Analytics endpoint
+
+  async getProfileStats(lawyerId: string, period = "week") {
+    try {
+      return this.request(
+        `/analytics/summary?lawyer_id=${lawyerId}&period=${period}`,
+        "GET"
+      );
+    } catch (error) {
+      console.error("Error fetching profile stats:", error);
+      throw error;
     }
   }
 }
 
 // Create a singleton instance
-let questionsService: QuestionsService
+let lawyerService: LawyerService;
 
-export function useQuestionsService() {
-  if (!questionsService) {
-    questionsService = new QuestionsService()
+export function useLawyerService() {
+  if (!lawyerService) {
+    lawyerService = new LawyerService();
   }
-  
-  return questionsService
+
+  return lawyerService;
 }
