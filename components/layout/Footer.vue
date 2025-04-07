@@ -4,7 +4,7 @@
         <div class="flex flex-col md:flex-row justify-between items-center">
           <!-- Logo and copyright -->
           <div class="mb-4 md:mb-0">
-            <div class="text-lg font-bold text-primary-600">Lexic Portal</div>
+            <div class="text-lg font-bold text-primary-600">Lexic</div>
             <p class="text-sm text-gray-500">
               &copy; {{ currentYear }} Lexic. Todos los derechos reservados.
             </p>

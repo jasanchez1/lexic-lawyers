@@ -4,7 +4,7 @@
     :class="[collapsed ? 'w-20' : 'w-64']"
   >
     <div class="h-16 flex items-center px-4 border-b border-primary-700">
-      <div v-if="!collapsed" class="text-xl font-bold text-white">Lexic Portal</div>
+      <div v-if="!collapsed" class="text-xl font-bold text-white">Lexic</div>
       <div v-else class="text-xl font-bold text-white w-full text-center">L</div>
     </div>
 
