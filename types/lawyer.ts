@@ -1,10 +1,11 @@
-export interface PracticeArea {
+
+  export interface PracticeArea {
     id: string;
     name: string;
     slug: string;
-    experienceScore: number;
+    experience_score?: number;
   }
-  
+
   export interface Education {
     id?: string;
     institution: string;

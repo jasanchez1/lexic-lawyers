@@ -1,8 +1,10 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useReviewsService } from '~/services/reviews-service'
+import { useAuth } from '~/composables/useAuth' // This is OK here because useReviews will be called in a setup context
 
 export function useReviews() {
   const reviewsService = useReviewsService()
+  const { user } = useAuth() // This is now in the right context
   
   const reviews = ref([])
   const stats = ref({
@@ -38,8 +40,12 @@ export function useReviews() {
   }
   
   const replyToReview = async (reviewId: string, content: string) => {
+    if (!user.value?.lawyer_id) {
+      throw new Error('You must be logged in as a lawyer to reply to reviews')
+    }
+    
     try {
-      const response = await reviewsService.replyToReview(reviewId, { content })
+      const response = await reviewsService.replyToReview(reviewId, { content }, user.value.lawyer_id)
       
       // Update the review in the list
       const index = reviews.value.findIndex(r => r.id === reviewId)

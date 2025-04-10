@@ -1,5 +1,3 @@
-const BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000'
-
 export class ApiService {
   protected async request<T>(
     endpoint: string,
@@ -7,6 +5,10 @@ export class ApiService {
     data?: any,
     headers: Record<string, string> = {}
   ): Promise<T> {
+    // Get base URL from env or use default
+    // This avoids using useRuntimeConfig outside of setup functions
+    const BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000'
+    
     const accessToken = localStorage.getItem('accessToken')
     
     const defaultHeaders: Record<string, string> = {
@@ -36,7 +38,7 @@ export class ApiService {
       // Check if the response is 401 Unauthorized
       if (response.status === 401) {
         // Try to refresh the token
-        const refreshed = await this.refreshToken()
+        const refreshed = await this.refreshToken(BASE_URL)
         
         if (refreshed) {
           // Retry the request with the new token
@@ -57,7 +59,7 @@ export class ApiService {
       
       // Parse response as JSON or return empty object if no content
       if (response.status !== 204) {
-        return await response.json()
+        return await response.json() as T
       } else {
         return {} as T
       }
@@ -67,7 +69,7 @@ export class ApiService {
     }
   }
   
-  private async refreshToken(): Promise<boolean> {
+  private async refreshToken(baseUrl: string): Promise<boolean> {
     const refreshToken = localStorage.getItem('refreshToken')
     
     if (!refreshToken) {
@@ -75,7 +77,7 @@ export class ApiService {
     }
     
     try {
-      const response = await fetch(`${BASE_URL}/auth/refresh`, {
+      const response = await fetch(`${baseUrl}/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
