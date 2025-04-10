@@ -6,21 +6,26 @@ export class ApiService {
     headers: Record<string, string> = {}
   ): Promise<T> {
     // Get base URL from env or use default
-    // This avoids using useRuntimeConfig outside of setup functions
-    const BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000'
-    
-    const accessToken = localStorage.getItem('accessToken')
+    const config = useRuntimeConfig()
+    console.log('API Request:', method, endpoint, data)
+    console.log('Base URL:', config.public.apiBaseUrl)
+    const BASE_URL = config.public.apiBaseUrl || 'http://localhost:8000'
     
     const defaultHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
       ...headers
     }
     
-    if (accessToken) {
-      defaultHeaders['Authorization'] = `Bearer ${accessToken}`
+    // Only add authorization header in client-side
+    if (process.client) {
+      const accessToken = localStorage.getItem('accessToken')
+      if (accessToken) {
+        defaultHeaders['Authorization'] = `Bearer ${accessToken}`
+      }
     }
     
     const url = `${BASE_URL}${endpoint}`
+    console.log('Full URL:', url)
     
     const options: RequestInit = {
       method,
@@ -33,10 +38,12 @@ export class ApiService {
     }
     
     try {
+      console.log('Fetching with options:', options)
       const response = await fetch(url, options)
+      console.log('Response status:', response.status)
       
       // Check if the response is 401 Unauthorized
-      if (response.status === 401) {
+      if (response.status === 401 && process.client) {
         // Try to refresh the token
         const refreshed = await this.refreshToken(BASE_URL)
         
@@ -52,14 +59,24 @@ export class ApiService {
       
       // Check for other error responses
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
+        console.error('API Error response:', response.status, response.statusText)
+        let errorData = {}
+        try {
+          errorData = await response.json()
+          console.error('Error data:', errorData)
+        } catch (e) {
+          console.error('Failed to parse error response')
+        }
+        
         const errorMessage = errorData.detail || `Error ${response.status}: ${response.statusText}`
         throw new Error(errorMessage)
       }
       
       // Parse response as JSON or return empty object if no content
       if (response.status !== 204) {
-        return await response.json() as T
+        const jsonResponse = await response.json()
+        console.log('API Response data:', jsonResponse)
+        return jsonResponse as T
       } else {
         return {} as T
       }
@@ -70,6 +87,8 @@ export class ApiService {
   }
   
   private async refreshToken(baseUrl: string): Promise<boolean> {
+    if (!process.client) return false
+    
     const refreshToken = localStorage.getItem('refreshToken')
     
     if (!refreshToken) {

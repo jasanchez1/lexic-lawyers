@@ -75,6 +75,7 @@
   const rememberMe = ref(false);
   
   const handleLogin = () => {
+    console.log('Login attempt with:', email.value, password.value);
     emit('login', {
       email: email.value,
       password: password.value,

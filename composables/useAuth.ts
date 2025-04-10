@@ -1,5 +1,6 @@
 import { ref, readonly } from 'vue'
 import { useAuthService } from '~/services/auth-service'
+import { useLawyerService } from '~/services/lawyer-service'
 
 // State that will be shared between component instances
 const isAuthenticated = ref(false)
@@ -10,6 +11,7 @@ const error = ref(null)
 
 export function useAuth() {
   const authService = useAuthService()
+  const lawyerService = useLawyerService()
   
   const login = async (email: string, password: string) => {
     isLoading.value = true
@@ -19,9 +21,11 @@ export function useAuth() {
       const response = await authService.login(email, password)
       
       if (response.access_token) {
-        // Store tokens in localStorage
-        localStorage.setItem('accessToken', response.access_token)
-        localStorage.setItem('refreshToken', response.refresh_token)
+        // Store tokens in localStorage (browser-only)
+        if (process.client) {
+          localStorage.setItem('accessToken', response.access_token)
+          localStorage.setItem('refreshToken', response.refresh_token)
+        }
         
         // Get user info
         await fetchUserProfile()
@@ -44,16 +48,20 @@ export function useAuth() {
     isLoading.value = true
     
     try {
-      const refreshToken = localStorage.getItem('refreshToken')
-      if (refreshToken) {
-        await authService.logout({ refresh_token: refreshToken })
+      if (process.client) {
+        const refreshToken = localStorage.getItem('refreshToken')
+        if (refreshToken) {
+          await authService.logout({ refresh_token: refreshToken })
+        }
+        
+        // Clear tokens from localStorage
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
       }
     } catch (err) {
       console.error('Logout error:', err)
     } finally {
-      // Clear user data and tokens regardless of API call success
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
+      // Clear user data regardless of API call success
       user.value = null
       isAuthenticated.value = false
       isLawyer.value = false
@@ -84,6 +92,12 @@ export function useAuth() {
   const initAuth = async () => {
     isLoading.value = true
     
+    // Skip on server-side
+    if (!process.client) {
+      isLoading.value = false
+      return
+    }
+    
     // Check if we have a token
     const token = localStorage.getItem('accessToken')
     
@@ -101,6 +115,8 @@ export function useAuth() {
   }
 
   const refreshToken = async () => {
+    if (!process.client) return false
+    
     const refreshToken = localStorage.getItem('refreshToken')
     
     if (!refreshToken) {
