@@ -13,17 +13,62 @@
 
       <!-- Right side with user info -->
       <div class="flex items-center">
-        <!-- Notifications -->
+        <!-- Notifications / Recent Activity -->
         <div class="relative mr-4">
-          <button class="text-gray-500 hover:text-gray-700 focus:outline-none">
+          <button 
+            @click="toggleNotifications" 
+            class="text-gray-500 hover:text-gray-700 focus:outline-none"
+          >
             <Bell class="w-6 h-6" />
-            <span
-              v-if="unreadNotifications > 0"
-              class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs flex items-center justify-center rounded-full"
-            >
-              {{ unreadNotifications > 9 ? '9+' : unreadNotifications }}
-            </span>
           </button>
+          
+          <!-- Activity Dropdown -->
+          <div 
+            v-if="showNotifications"
+            class="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg border border-gray-100 z-50"
+          >
+            <div class="p-2">
+              <div class="border-b pb-2 mb-2 px-3 py-2 flex justify-between items-center">
+                <p class="text-sm font-medium">Actividad Reciente</p>
+              </div>
+              
+              <div v-if="isLoading" class="py-4 text-center">
+                <div class="inline-block w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+                <p class="text-sm text-gray-500">Cargando actividades...</p>
+              </div>
+              
+              <div v-else-if="activities.length === 0" class="py-4 text-center text-gray-500 text-sm">
+                No hay actividad reciente
+              </div>
+              
+              <div v-else class="max-h-80 overflow-y-auto">
+                <button
+                  v-for="(activity, index) in activities"
+                  :key="index"
+                  @click="handleActivityClick(activity)"
+                  class="w-full px-3 py-2 hover:bg-gray-50 text-left transition-colors rounded-md flex items-start gap-3"
+                >
+                  <div :class="getActivityIconClass(activity.type)" class="p-2 rounded-full mt-0.5">
+                    <component :is="getActivityIcon(activity.type)" class="w-4 h-4" />
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm">
+                      {{ activity.description }}
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">
+                      {{ formatTime(activity.timestamp) }}
+                    </p>
+                  </div>
+                </button>
+              </div>
+              
+              <div class="border-t pt-2 mt-2 px-3 py-2 text-center">
+                <NuxtLink to="/" class="text-xs text-primary-600 hover:text-primary-800">
+                  Ver toda la actividad en el dashboard
+                </NuxtLink>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- User Dropdown -->
@@ -76,20 +121,118 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Menu, Bell, ChevronDown } from 'lucide-vue-next'
+import { Menu, Bell, ChevronDown, MessageCircle, Eye, AlertCircle, Clock } from 'lucide-vue-next'
 import { onClickOutside } from '@vueuse/core'
 import { useAuth } from '~/composables/useAuth'
-import { useNotifications } from '~/composables/useNotifications'
+import { useRecentActivity } from '~/composables/useRecentActivity'
 
 const emit = defineEmits(['toggle-sidebar'])
 const userMenuRef = ref(null)
 const isUserMenuOpen = ref(false)
 const { user, logout } = useAuth()
-const { unreadCount: unreadNotifications } = useNotifications()
 
-// Close dropdown when clicking outside
+// Get real activity data
+const { activities, isLoading, fetchRecentActivity } = useRecentActivity()
+
+// Load activities on mount
+onMounted(() => {
+  fetchRecentActivity()
+})
+
+// Notifications state
+const showNotifications = ref(false)
+
+// Toggle notifications dropdown
+const toggleNotifications = () => {
+  showNotifications.value = !showNotifications.value
+  
+  // Close user menu if open
+  if (showNotifications.value && isUserMenuOpen.value) {
+    isUserMenuOpen.value = false
+  }
+  
+  // Refresh activities when opening
+  if (showNotifications.value) {
+    fetchRecentActivity()
+  }
+}
+
+// Handle activity click
+const handleActivityClick = (activity) => {
+  // Close dropdown
+  showNotifications.value = false
+  
+  // Navigate to link if available
+  if (activity.actionUrl) {
+    navigateTo(activity.actionUrl)
+  }
+}
+
+// Format time
+const formatTime = (timestamp) => {
+  const date = new Date(timestamp)
+  
+  // If today, show only time
+  const today = new Date()
+  if (
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+  ) {
+    return 'Hoy, ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+  
+  // If yesterday
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear()
+  ) {
+    return 'Ayer, ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+  
+  // If this week
+  const daysDiff = Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+  if (daysDiff < 7) {
+    return date.toLocaleDateString([], { weekday: 'long' }) + ', ' + 
+           date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+  
+  // Otherwise show full date
+  return date.toLocaleDateString() + ', ' + 
+         date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+// Get activity icon
+const getActivityIcon = (type) => {
+  const icons = {
+    message: MessageCircle,
+    view: Eye,
+    impression: Eye,
+    click: Clock
+  }
+  
+  return icons[type] || AlertCircle
+}
+
+// Get activity icon background class
+const getActivityIconClass = (type) => {
+  const classes = {
+    message: 'bg-green-50 text-green-600',
+    view: 'bg-blue-50 text-blue-600',
+    impression: 'bg-yellow-50 text-yellow-600',
+    click: 'bg-purple-50 text-purple-600'
+  }
+  
+  return classes[type] || 'bg-gray-50 text-gray-600'
+}
+
+// Close dropdowns when clicking outside
 onClickOutside(userMenuRef, () => {
   isUserMenuOpen.value = false
+  showNotifications.value = false
 })
 
 // User initials for avatar
