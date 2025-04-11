@@ -1,8 +1,10 @@
 import { ref } from 'vue';
 import { useLawyerService } from '~/services/lawyer-service';
+import { useAuth } from '~/composables/useAuth';
 
 export function useProfile() {
   const lawyerService = useLawyerService();
+  const { user } = useAuth();
   
   const profile = ref(null);
   const education = ref([]);
@@ -13,11 +15,18 @@ export function useProfile() {
   const error = ref(null);
   
   // Fetch lawyer profile
-  const fetchProfile = async (lawyerId: string) => {
+  const fetchProfile = async (overrideLawyerId?: string) => {
     isLoading.value = true;
     error.value = null;
     
     try {
+      // Get lawyer ID from the authenticated user if not provided
+      const lawyerId = overrideLawyerId || user.value?.lawyer_id;
+      
+      if (!lawyerId) {
+        throw new Error('No lawyer ID available to fetch profile');
+      }
+      
       const response = await lawyerService.getLawyerProfile(lawyerId);
       profile.value = response;
       return response;
@@ -31,11 +40,18 @@ export function useProfile() {
   };
   
   // Update lawyer profile
-  const updateProfile = async (lawyerId: string, data: any) => {
+  const updateProfile = async (data: any) => {
     isUpdating.value = true;
     error.value = null;
     
     try {
+      // Get lawyer ID from the authenticated user
+      const lawyerId = user.value?.lawyer_id;
+      
+      if (!lawyerId) {
+        throw new Error('No lawyer ID available to update profile');
+      }
+      
       const response = await lawyerService.updateLawyerProfile(lawyerId, data);
       profile.value = {
         ...profile.value,
@@ -52,11 +68,18 @@ export function useProfile() {
   };
   
   // Fetch lawyer experience and education
-  const fetchExperience = async (lawyerId: string) => {
+  const fetchExperience = async () => {
     isLoading.value = true;
     error.value = null;
     
     try {
+      // Get lawyer ID from the authenticated user
+      const lawyerId = user.value?.lawyer_id;
+      
+      if (!lawyerId) {
+        throw new Error('No lawyer ID available to fetch experience');
+      }
+      
       const response = await lawyerService.getLawyerExperience(lawyerId);
       education.value = response.education || [];
       workExperience.value = response.work_experience || [];
@@ -72,11 +95,18 @@ export function useProfile() {
   };
   
   // Add education entry
-  const addEducation = async (lawyerId: string, data: any) => {
+  const addEducation = async (data: any) => {
     isUpdating.value = true;
     error.value = null;
     
     try {
+      // Get lawyer ID from the authenticated user
+      const lawyerId = user.value?.lawyer_id;
+      
+      if (!lawyerId) {
+        throw new Error('No lawyer ID available');
+      }
+      
       const response = await lawyerService.createLawyerEducation(lawyerId, data);
       education.value = [...education.value, response];
       return response;
@@ -90,11 +120,18 @@ export function useProfile() {
   };
   
   // Update education entry
-  const updateEducation = async (lawyerId: string, educationId: string, data: any) => {
+  const updateEducation = async (educationId: string, data: any) => {
     isUpdating.value = true;
     error.value = null;
     
     try {
+      // Get lawyer ID from the authenticated user
+      const lawyerId = user.value?.lawyer_id;
+      
+      if (!lawyerId) {
+        throw new Error('No lawyer ID available');
+      }
+      
       const response = await lawyerService.updateLawyerEducation(lawyerId, educationId, data);
       
       // Update in local state
@@ -114,11 +151,18 @@ export function useProfile() {
   };
   
   // Delete education entry
-  const deleteEducation = async (lawyerId: string, educationId: string) => {
+  const deleteEducation = async (educationId: string) => {
     isUpdating.value = true;
     error.value = null;
     
     try {
+      // Get lawyer ID from the authenticated user
+      const lawyerId = user.value?.lawyer_id;
+      
+      if (!lawyerId) {
+        throw new Error('No lawyer ID available');
+      }
+      
       await lawyerService.deleteLawyerEducation(lawyerId, educationId);
       
       // Remove from local state
@@ -135,11 +179,18 @@ export function useProfile() {
   };
   
   // Add work experience entry
-  const addWorkExperience = async (lawyerId: string, data: any) => {
+  const addWorkExperience = async (data: any) => {
     isUpdating.value = true;
     error.value = null;
     
     try {
+      // Get lawyer ID from the authenticated user
+      const lawyerId = user.value?.lawyer_id;
+      
+      if (!lawyerId) {
+        throw new Error('No lawyer ID available');
+      }
+      
       const response = await lawyerService.createLawyerWorkExperience(lawyerId, data);
       workExperience.value = [...workExperience.value, response];
       return response;
@@ -153,11 +204,18 @@ export function useProfile() {
   };
   
   // Update work experience entry
-  const updateWorkExperience = async (lawyerId: string, experienceId: string, data: any) => {
+  const updateWorkExperience = async (experienceId: string, data: any) => {
     isUpdating.value = true;
     error.value = null;
     
     try {
+      // Get lawyer ID from the authenticated user
+      const lawyerId = user.value?.lawyer_id;
+      
+      if (!lawyerId) {
+        throw new Error('No lawyer ID available');
+      }
+      
       const response = await lawyerService.updateLawyerWorkExperience(lawyerId, experienceId, data);
       
       // Update in local state
@@ -177,11 +235,18 @@ export function useProfile() {
   };
   
   // Delete work experience entry
-  const deleteWorkExperience = async (lawyerId: string, experienceId: string) => {
+  const deleteWorkExperience = async (experienceId: string) => {
     isUpdating.value = true;
     error.value = null;
     
     try {
+      // Get lawyer ID from the authenticated user
+      const lawyerId = user.value?.lawyer_id;
+      
+      if (!lawyerId) {
+        throw new Error('No lawyer ID available');
+      }
+      
       await lawyerService.deleteLawyerWorkExperience(lawyerId, experienceId);
       
       // Remove from local state
@@ -198,11 +263,18 @@ export function useProfile() {
   };
   
   // Add achievement entry
-  const addAchievement = async (lawyerId: string, data: any) => {
+  const addAchievement = async (data: any) => {
     isUpdating.value = true;
     error.value = null;
     
     try {
+      // Get lawyer ID from the authenticated user
+      const lawyerId = user.value?.lawyer_id;
+      
+      if (!lawyerId) {
+        throw new Error('No lawyer ID available');
+      }
+      
       const response = await lawyerService.createLawyerAchievement(lawyerId, data);
       achievements.value = [...achievements.value, response];
       return response;
@@ -216,11 +288,18 @@ export function useProfile() {
   };
   
   // Update achievement entry
-  const updateAchievement = async (lawyerId: string, achievementId: string, data: any) => {
+  const updateAchievement = async (achievementId: string, data: any) => {
     isUpdating.value = true;
     error.value = null;
     
     try {
+      // Get lawyer ID from the authenticated user
+      const lawyerId = user.value?.lawyer_id;
+      
+      if (!lawyerId) {
+        throw new Error('No lawyer ID available');
+      }
+      
       const response = await lawyerService.updateLawyerAchievement(lawyerId, achievementId, data);
       
       // Update in local state
@@ -240,11 +319,18 @@ export function useProfile() {
   };
   
   // Delete achievement entry
-  const deleteAchievement = async (lawyerId: string, achievementId: string) => {
+  const deleteAchievement = async (achievementId: string) => {
     isUpdating.value = true;
     error.value = null;
     
     try {
+      // Get lawyer ID from the authenticated user
+      const lawyerId = user.value?.lawyer_id;
+      
+      if (!lawyerId) {
+        throw new Error('No lawyer ID available');
+      }
+      
       await lawyerService.deleteLawyerAchievement(lawyerId, achievementId);
       
       // Remove from local state
