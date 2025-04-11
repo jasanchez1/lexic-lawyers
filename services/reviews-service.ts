@@ -2,7 +2,7 @@ import { ApiService } from './api'
 import type { LawyerReview, ReviewStats } from '~/types/review'
 
 export class ReviewsService extends ApiService {
-  async getReviews(filters = {}) {
+  async getReviews(lawyerId: string, filters = {}) {
     const queryParams = new URLSearchParams();
     
     // Add filters to query parameters
@@ -12,7 +12,7 @@ export class ReviewsService extends ApiService {
       }
     });
     
-    return this.request<{ reviews: LawyerReview[], stats: ReviewStats }>(`/lawyers/reviews?${queryParams.toString()}`, 'GET');
+    return this.request<{ reviews: LawyerReview[], stats: ReviewStats }>(`/lawyers/${lawyerId}/reviews?${queryParams.toString()}`, 'GET');
   }
   
   async replyToReview(reviewId: string, data: { content: string }, lawyerId?: string) {

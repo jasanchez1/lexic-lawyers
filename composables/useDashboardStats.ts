@@ -6,13 +6,10 @@ export function useDashboardStats() {
 
   const stats = ref({
     profileViews: 0,
-    newQuestions: 0,
-    totalAnswers: 0,
-    rating: 0,
-    responseRate: 0,
-    avgResponseTime: 0,
     profileImpressions: 0,
-    contactRequests: 0,
+    messagesSent: 0,
+    messageRate: 0,
+    overallCTR: 0
   });
 
   const isLoading = ref(true);
@@ -23,12 +20,22 @@ export function useDashboardStats() {
     error.value = null;
 
     try {
-      // For a real implementation, call the API here
+      // Call the API
       const response = await statsService.getDashboardStats();
-
+      
+      if (!response || !response.success) {
+        throw new Error('Failed to fetch dashboard stats');
+      }
+      
+      const data = response.data;
+      
+      // Map the API response to our stats structure using only what's available
       stats.value = {
-        ...stats.value,
-        ...response,
+        profileViews: data.counts?.profile_views || 0,
+        profileImpressions: data.counts?.impressions || 0,
+        messagesSent: data.counts?.messages_sent || 0,
+        messageRate: data.rates?.message_rate || 0,
+        overallCTR: data.rates?.overall_ctr || 0
       };
     } catch (err) {
       console.error("Error fetching dashboard stats:", err);

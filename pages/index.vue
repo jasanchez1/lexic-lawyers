@@ -14,30 +14,30 @@
     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <DashboardStatCard
         title="Vistas del Perfil"
-        :value="stats.profileViews || 0"
+        :value="stats.profileViews"
         trend="up"
         :percentage="8.2"
         icon="Eye"
       />
       <DashboardStatCard
-        title="Nuevas Preguntas"
-        :value="stats.newQuestions || 0"
-        trend="down"
-        :percentage="3.1"
-        icon="HelpCircle"
-      />
-      <DashboardStatCard
-        title="Respuestas"
-        :value="stats.totalAnswers || 0"
+        title="Impresiones"
+        :value="stats.profileImpressions"
         trend="up"
         :percentage="12.5"
+        icon="Users"
+      />
+      <DashboardStatCard
+        title="Mensajes Recibidos"
+        :value="stats.messagesSent"
+        trend="up"
+        :percentage="15"
         icon="MessageCircle"
       />
       <DashboardStatCard
-        title="Calificación"
-        :value="stats.rating || 0"
-        icon="Star"
-        is-rating
+        title="Tasa de Mensajes"
+        :value="stats.messageRate"
+        icon="BarChart"
+        is-percentage
       />
     </div>
 
@@ -51,13 +51,9 @@
         />
       </div>
 
-      <!-- Quick Actions and New Questions -->
+      <!-- Quick Actions -->
       <div class="space-y-6">
         <DashboardQuickActions />
-        <DashboardNewQuestions 
-          :questions="newQuestions || []" 
-          :loading="activitiesLoading" 
-        />
       </div>
     </div>
   </div>
@@ -72,5 +68,5 @@ definePageMeta({
 });
 
 const { stats, isLoading: statsLoading } = useDashboardStats();
-const { activities: recentActivities, questions: newQuestions, isLoading: activitiesLoading } = useRecentActivity();
+const { activities: recentActivities, isLoading: activitiesLoading } = useRecentActivity();
 </script>

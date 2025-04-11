@@ -1,27 +1,32 @@
-import { ApiService } from './api'
-import type { DashboardStats } from '~/types/stat'
+import { ApiService } from './api';
 
 export class StatsService extends ApiService {
   async getDashboardStats() {
-    return this.request<DashboardStats>('/analytics/summary', 'GET');
-  }
-  
-  async getRecentActivity() {
-    // Since we can't use useAuth() outside of a setup function,
-    // we'll have the component pass the lawyerId when needed
+    // Get summary analytics data
     return this.request<any>('/analytics/summary', 'GET');
   }
   
-  async getProfileStats(period = 'week', lawyerId?: string) {
-    // Allow the lawyerId to be passed as a parameter
-    const queryParams = new URLSearchParams();
-    queryParams.append('period', period);
-    
-    if (lawyerId) {
-      queryParams.append('lawyer_id', lawyerId);
+  async getRecentActivity() {
+    // This would be a separate endpoint in a real API
+    // For now, we're reusing the summary endpoint
+    return this.request<any>('/analytics/summary', 'GET');
+  }
+  
+  async getProfileStats(period = 'week') {
+    // Get analytics summary data
+    try {
+      const response = await this.request<any>('/analytics/summary', 'GET');
+      
+      if (!response || !response.success) {
+        throw new Error('Failed to get analytics data');
+      }
+      
+      // Return the raw data as received from the API
+      return response;
+    } catch (error) {
+      console.error('Error getting profile stats:', error);
+      throw error;
     }
-    
-    return this.request<any>(`/analytics/summary?${queryParams.toString()}`, 'GET');
   }
   
   // Track profile views

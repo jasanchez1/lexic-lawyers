@@ -18,9 +18,13 @@ export function useReviews() {
   const fetchReviews = async (filters = {}) => {
     isLoading.value = true
     error.value = null
+
+    if (!user.value?.lawyer_id) {
+      throw new Error('You must be logged in as a lawyer to reply to reviews')
+    }
     
     try {
-      const response = await reviewsService.getReviews(filters)
+      const response = await reviewsService.getReviews(user.value.lawyer_id, filters)
       
       reviews.value = response.reviews || []
       stats.value = response.stats || {
