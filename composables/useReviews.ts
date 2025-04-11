@@ -1,10 +1,10 @@
 import { ref, watch } from 'vue'
 import { useReviewsService } from '~/services/reviews-service'
-import { useAuth } from '~/composables/useAuth' // This is OK here because useReviews will be called in a setup context
+import { useAuth } from '~/composables/useAuth'
 
 export function useReviews() {
   const reviewsService = useReviewsService()
-  const { user } = useAuth() // This is now in the right context
+  const { user } = useAuth()
   
   const reviews = ref([])
   const stats = ref({
@@ -18,13 +18,21 @@ export function useReviews() {
   const fetchReviews = async (filters = {}) => {
     isLoading.value = true
     error.value = null
-
-    if (!user.value?.lawyer_id) {
-      throw new Error('You must be logged in as a lawyer to reply to reviews')
-    }
     
     try {
-      const response = await reviewsService.getReviews(user.value.lawyer_id, filters)
+      // Make sure we have a lawyer ID
+      if (!user.value?.lawyer_id) {
+        throw new Error('No lawyer ID available to fetch reviews');
+      }
+      
+      // Store lawyer ID in localStorage for service use
+      if (process.client) {
+        localStorage.setItem('authData', JSON.stringify({ 
+          lawyerId: user.value.lawyer_id 
+        }));
+      }
+      
+      const response = await reviewsService.getReviews(filters)
       
       reviews.value = response.reviews || []
       stats.value = response.stats || {
@@ -43,37 +51,11 @@ export function useReviews() {
     }
   }
   
-  const replyToReview = async (reviewId: string, content: string) => {
-    if (!user.value?.lawyer_id) {
-      throw new Error('You must be logged in as a lawyer to reply to reviews')
-    }
-    
-    try {
-      const response = await reviewsService.replyToReview(reviewId, { content }, user.value.lawyer_id)
-      
-      // Update the review in the list
-      const index = reviews.value.findIndex(r => r.id === reviewId)
-      if (index !== -1) {
-        reviews.value[index] = {
-          ...reviews.value[index],
-          hasReply: true,
-          reply: response
-        }
-      }
-      
-      return response
-    } catch (err) {
-      console.error('Error replying to review:', err)
-      throw err
-    }
-  }
-  
   return {
     reviews,
     stats,
     isLoading,
     error,
-    fetchReviews,
-    replyToReview
+    fetchReviews
   }
 }
