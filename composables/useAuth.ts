@@ -77,7 +77,7 @@ export function useAuth() {
       user.value = userData
       
       // Check if user has lawyer profile
-      isLawyer.value = !!userData.lawyer_id
+      isLawyer.value = userData.is_lawyer
       
       return userData
     } catch (err) {

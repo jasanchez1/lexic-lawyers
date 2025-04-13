@@ -114,7 +114,6 @@ const rememberMe = ref(false)
 const { login } = useAuth()
 
 const handleLogin = async () => {
-  console.log('Login function called with:', email.value, password.value)
   
   if (!email.value || !password.value) {
     errorMsg.value = 'Por favor ingrese su email y contraseña'

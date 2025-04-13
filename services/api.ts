@@ -7,8 +7,6 @@ export class ApiService {
   ): Promise<T> {
     // Get base URL from env or use default
     const config = useRuntimeConfig()
-    console.log('API Request:', method, endpoint, data)
-    console.log('Base URL:', config.public.apiBaseUrl)
     const BASE_URL = config.public.apiBaseUrl || 'http://localhost:8000'
     
     const defaultHeaders: Record<string, string> = {
@@ -24,9 +22,7 @@ export class ApiService {
       }
     }
     
-    const url = `${BASE_URL}${endpoint}`
-    console.log('Full URL:', url)
-    
+    const url = `${BASE_URL}${endpoint}`    
     const options: RequestInit = {
       method,
       headers: defaultHeaders,
@@ -38,10 +34,7 @@ export class ApiService {
     }
     
     try {
-      console.log('Fetching with options:', options)
-      const response = await fetch(url, options)
-      console.log('Response status:', response.status)
-      
+      const response = await fetch(url, options)      
       // Check if the response is 401 Unauthorized
       if (response.status === 401 && process.client) {
         // Try to refresh the token
@@ -75,7 +68,6 @@ export class ApiService {
       // Parse response as JSON or return empty object if no content
       if (response.status !== 204) {
         const jsonResponse = await response.json()
-        console.log('API Response data:', jsonResponse)
         return jsonResponse as T
       } else {
         return {} as T

@@ -3,7 +3,6 @@ import type { TokenResponse, User } from '~/types/user'
 
 export class AuthService extends ApiService {
   async login(email: string, password: string): Promise<TokenResponse> {
-    console.log('AuthService login with:', email)
     return this.request<TokenResponse>('/auth/login', 'POST', { email, password });
   }
   

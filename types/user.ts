@@ -9,6 +9,7 @@ export interface User {
     updatedAt: string;
     isAdmin?: boolean;
     lawyerId?: string | null;
+    isLawyer: boolean;
   }
   
   export interface LoginCredentials {

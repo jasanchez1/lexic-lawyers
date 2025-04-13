@@ -551,7 +551,6 @@ const saveProfile = async () => {
       areas: transformedAreas // Use the transformed areas
     }
     
-    console.log('Sending update data:', updateData)
     
     // Update profile
     await updateProfile(updateData)
