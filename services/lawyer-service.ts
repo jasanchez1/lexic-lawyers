@@ -14,6 +14,11 @@ export class LawyerService extends ApiService {
     return this.request<any>(`/lawyers/${lawyerId}/experience`, "GET");
   }
 
+  // Create a new lawyer profile
+  async createLawyer(data: any) {
+    return this.request<Lawyer>('/lawyers', 'POST', data);
+  }
+
   // Education endpoints
   async createLawyerEducation(lawyerId: string, data: Education) {
     return this.request<Education>(`/lawyers/${lawyerId}/education`, "POST", data);

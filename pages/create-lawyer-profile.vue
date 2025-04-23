@@ -333,7 +333,7 @@
   });
   
   // Services
-  const { user } = useAuth();
+  const { user, fetchUserProfile } = useAuth();
   const { practiceAreas } = usePracticeAreas();
   const lawyerService = useLawyerService();
   const { success, error: showError } = useNotifications();
@@ -354,11 +354,15 @@
     phone: '',
     city: '',
     bio: '',
-    image_url: '',
+    image_url: '', // Use API naming conventions
+    coverImageUrl: '',
     professionalStartDate: '',
     languages: ['Español'],
     areas: []
   });
+  
+  // For languages input (comma-separated)
+  const languagesInput = ref(formData.value.languages.join(', '));
   
   // Get today's date in ISO format for the date input max
   const today = new Date().toISOString().split('T')[0];
@@ -396,10 +400,13 @@
     
     const area = practiceAreas.value.find(a => a.id === selectedAreaId.value);
     if (area) {
+      // Add the area with initial experience score that user can adjust
       formData.value.areas.push({
         area_id: area.id,
+        id: area.id, // Duplicate id for template compatibility
         name: area.name,
-        experience_score: 50 // Default to 50%
+        experience_score: 0, // Start at 0 and let user adjust with slider
+        slug: area.slug
       });
       
       selectedAreaId.value = '';
@@ -417,11 +424,15 @@
     
     formData.value.languages.push(newLanguage.value);
     newLanguage.value = '';
+    // Update the language input string
+    languagesInput.value = formData.value.languages.join(', ');
   };
   
   // Remove a language
   const removeLanguage = (index: number) => {
     formData.value.languages.splice(index, 1);
+    // Update the language input string
+    languagesInput.value = formData.value.languages.join(', ');
   };
   
   // Submit the form
@@ -429,6 +440,17 @@
     isSubmitting.value = true;
     
     try {
+      // Parse languages from comma-separated input
+      const languages = languagesInput.value.split(',')
+        .map(lang => lang.trim())
+        .filter(lang => lang.length > 0);
+      
+      // Transform areas to match the API's expected format
+      const transformedAreas = formData.value.areas.map(area => ({
+        area_id: area.area_id, // API expects area_id
+        experience_score: area.experience_score
+      }));
+      
       // Prepare the data for the API
       const lawyerData = {
         name: formData.value.name,
@@ -437,18 +459,23 @@
         phone: formData.value.phone,
         city: formData.value.city,
         bio: formData.value.bio,
-        image_url: formData.value.image_url,
+        image_url: formData.value.image_url, // Already using API naming conventions
         professional_start_date: formData.value.professionalStartDate || undefined,
-        languages: formData.value.languages,
+        languages,
         // Only send required fields for areas
-        areas: formData.value.areas.map(area => ({
-          area_id: area.area_id,
-          experience_score: area.experience_score
-        }))
+        areas: transformedAreas,
+        // Pass the user ID if available
+        user_id: user.value?.id
       };
       
-      // Create the lawyer profile
+      // Create the lawyer profile using the LawyerService
       const response = await lawyerService.createLawyer(lawyerData);
+      
+      // Update the user's lawyer_id in the auth state
+      if (response && response.id) {
+        // Refresh user profile to get updated information including lawyer_id
+        await fetchUserProfile();
+      }
       
       // Show success message
       success('Perfil creado', 'Su perfil de abogado ha sido creado correctamente');
