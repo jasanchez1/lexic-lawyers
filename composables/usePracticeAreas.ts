@@ -1,30 +1,32 @@
 import { ref, onMounted } from 'vue';
+import { usePracticeAreasService } from '~/services/practice-area-service';
 
 export function usePracticeAreas() {
-  const practiceAreas = ref([
-    { id: '1', name: 'Derecho Civil', slug: 'derecho-civil' },
-    { id: '2', name: 'Contratos', slug: 'contratos' },
-    { id: '3', name: 'Propiedad', slug: 'propiedad' },
-    { id: '4', name: 'Derecho de Familia', slug: 'derecho-familia' },
-    { id: '5', name: 'Derecho Laboral', slug: 'derecho-laboral' },
-    { id: '6', name: 'Derecho Comercial', slug: 'derecho-comercial' },
-    { id: '7', name: 'Derecho Penal', slug: 'derecho-penal' },
-    { id: '8', name: 'Derecho Tributario', slug: 'derecho-tributario' },
-    { id: '9', name: 'Propiedad Intelectual', slug: 'propiedad-intelectual' },
-    { id: '10', name: 'Inmobiliario', slug: 'inmobiliario' }
-  ]);
-  
-  const isLoading = ref(false);
+  const practiceAreasService = usePracticeAreasService();
+  const practiceAreas = ref([]);
+  const isLoading = ref(true);
   const error = ref(null);
   
   const fetchPracticeAreas = async () => {
-    // In a real app, this would call an API
-    // For now we'll just use the hardcoded list
-    return practiceAreas.value;
+    isLoading.value = true;
+    error.value = null;
+    
+    try {
+      // Call the API to get real practice areas
+      const response = await practiceAreasService.getPracticeAreas();
+      practiceAreas.value = response || [];
+      return practiceAreas.value.sort((a, b) => a.name.localeCompare(b.name));
+    } catch (err) {
+      console.error('Error fetching practice areas:', err);
+      error.value = err instanceof Error ? err.message : 'Error al cargar áreas de práctica';
+      return [];
+    } finally {
+      isLoading.value = false;
+    }
   };
   
-  onMounted(() => {
-    fetchPracticeAreas();
+  onMounted(async () => {
+    await fetchPracticeAreas();
   });
   
   return {
