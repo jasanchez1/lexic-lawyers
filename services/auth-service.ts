@@ -1,21 +1,32 @@
 import { ApiService } from './api'
 import type { TokenResponse, User } from '~/types/user'
+import { getRefreshToken } from '~/utils/cookies'
 
 export class AuthService extends ApiService {
   async login(email: string, password: string): Promise<TokenResponse> {
     return this.request<TokenResponse>('/auth/login', 'POST', { email, password });
   }
   
-  async logout(data: { refresh_token: string }): Promise<any> {
-    return this.request('/auth/logout', 'POST', data);
+  async logout(refresh_token: string): Promise<any> {
+    return this.request('/auth/logout', 'POST', { refresh_token });
   }
   
-  async refreshToken(data: { refresh_token: string }): Promise<TokenResponse> {
-    return this.request<TokenResponse>('/auth/refresh', 'POST', data);
+  async refreshToken(refresh_token: string): Promise<TokenResponse> {
+    return this.request<TokenResponse>('/auth/refresh', 'POST', { refresh_token });
   }
   
   async getCurrentUser(): Promise<User> {
     return this.request<User>('/auth/me', 'GET');
+  }
+
+  async isLoggedIn(): Promise<boolean> {
+    try {
+      // Just make a lightweight request to verify authentication
+      await this.request<{status: string}>('/auth/status', 'GET');
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 }
 

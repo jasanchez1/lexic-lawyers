@@ -1,6 +1,13 @@
 import { ref, readonly } from 'vue'
 import { useAuthService } from '~/services/auth-service'
 import { useLawyerService } from '~/services/lawyer-service'
+import { 
+  getToken, 
+  getRefreshToken, 
+  storeTokens,
+  clearTokens,
+  getRootDomain
+} from '~/utils/cookies'
 
 // State that will be shared between component instances
 const isAuthenticated = ref(false)
@@ -20,12 +27,9 @@ export function useAuth() {
     try {
       const response = await authService.login(email, password)
       
-      if (response.access_token) {
-        // Store tokens in localStorage (browser-only)
-        if (process.client) {
-          localStorage.setItem('accessToken', response.access_token)
-          localStorage.setItem('refreshToken', response.refresh_token)
-        }
+      if (response.access_token && response.refresh_token) {
+        // Store tokens in cookies and localStorage
+        storeTokens(response.access_token, response.refresh_token)
         
         // Get user info
         await fetchUserProfile()
@@ -48,19 +52,19 @@ export function useAuth() {
     isLoading.value = true
     
     try {
-      if (process.client) {
-        const refreshToken = localStorage.getItem('refreshToken')
-        if (refreshToken) {
-          await authService.logout({ refresh_token: refreshToken })
-        }
-        
-        // Clear tokens from localStorage
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
+      // Get the refresh token
+      const refreshToken = getRefreshToken()
+      
+      if (refreshToken) {
+        // Call the logout endpoint
+        await authService.logout(refreshToken)
       }
     } catch (err) {
       console.error('Logout error:', err)
     } finally {
+      // Clear all tokens
+      clearTokens()
+      
       // Clear user data regardless of API call success
       user.value = null
       isAuthenticated.value = false
@@ -93,21 +97,35 @@ export function useAuth() {
     isLoading.value = true
     
     // Skip on server-side
-    if (!process.client) {
-      isLoading.value = false
-      return
-    }
-    
-    // Check if we have a token
-    const token = localStorage.getItem('accessToken')
-    
-    if (token) {
-      try {
-        await fetchUserProfile()
-        isAuthenticated.value = true
-      } catch (err) {
-        // Token might be invalid, try to refresh
-        await refreshToken()
+    if (!process.server) {
+      // Check if we have a token
+      const token = getToken()
+      
+      if (token) {
+        try {
+          // Check if the token is valid by fetching the user profile
+          await fetchUserProfile()
+          isAuthenticated.value = true
+        } catch (err) {
+          // Token might be invalid, try to refresh
+          const refreshed = await refreshToken()
+          if (!refreshed) {
+            console.error('Could not refresh token', err)
+          }
+        }
+      } else {
+        // Check if we can login via the API's status endpoint
+        // This helps detect if we're authenticated via cookies from parent domain
+        try {
+          const isLoggedIn = await authService.isLoggedIn()
+          
+          if (isLoggedIn) {
+            await fetchUserProfile()
+            isAuthenticated.value = true
+          }
+        } catch (err) {
+          console.error('Error checking login status:', err)
+        }
       }
     }
     
@@ -115,9 +133,10 @@ export function useAuth() {
   }
 
   const refreshToken = async () => {
-    if (!process.client) return false
+    if (process.server) return false
     
-    const refreshToken = localStorage.getItem('refreshToken')
+    // Get the refresh token
+    const refreshToken = getRefreshToken()
     
     if (!refreshToken) {
       isAuthenticated.value = false
@@ -126,11 +145,11 @@ export function useAuth() {
     }
     
     try {
-      const response = await authService.refreshToken({ refresh_token: refreshToken })
+      const response = await authService.refreshToken(refreshToken)
       
-      if (response.access_token) {
-        localStorage.setItem('accessToken', response.access_token)
-        localStorage.setItem('refreshToken', response.refresh_token)
+      if (response.access_token && response.refresh_token) {
+        // Store the new tokens
+        storeTokens(response.access_token, response.refresh_token)
         
         // Get user info
         await fetchUserProfile()
@@ -142,8 +161,7 @@ export function useAuth() {
       console.error('Token refresh error:', err)
       
       // Clear invalid tokens
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
+      clearTokens()
       isAuthenticated.value = false
       isLawyer.value = false
     }

@@ -1,3 +1,10 @@
+import { 
+  getToken, 
+  getRefreshToken, 
+  storeTokens, 
+  clearTokens 
+} from '~/utils/cookies'
+
 export class ApiService {
   protected async request<T>(
     endpoint: string,
@@ -16,9 +23,9 @@ export class ApiService {
     
     // Only add authorization header in client-side
     if (process.client) {
-      const accessToken = localStorage.getItem('accessToken')
-      if (accessToken) {
-        defaultHeaders['Authorization'] = `Bearer ${accessToken}`
+      const token = getToken()
+      if (token) {
+        defaultHeaders['Authorization'] = `Bearer ${token}`
       }
     }
     
@@ -26,7 +33,7 @@ export class ApiService {
     const options: RequestInit = {
       method,
       headers: defaultHeaders,
-      credentials: 'include',
+      credentials: 'include', // Include cookies in request (critical for cross-domain auth)
     }
     
     if (data && method !== 'GET') {
@@ -38,7 +45,7 @@ export class ApiService {
       // Check if the response is 401 Unauthorized
       if (response.status === 401 && process.client) {
         // Try to refresh the token
-        const refreshed = await this.refreshToken(BASE_URL)
+        const refreshed = await this.refreshToken()
         
         if (refreshed) {
           // Retry the request with the new token
@@ -78,39 +85,49 @@ export class ApiService {
     }
   }
   
-  private async refreshToken(baseUrl: string): Promise<boolean> {
+  private async refreshToken(): Promise<boolean> {
     if (!process.client) return false
     
-    const refreshToken = localStorage.getItem('refreshToken')
+    // Get config for base URL
+    const config = useRuntimeConfig()
+    const BASE_URL = config.public.apiBaseUrl || 'http://localhost:8000'
+    
+    // Get refresh token 
+    const refreshToken = getRefreshToken()
     
     if (!refreshToken) {
       return false
     }
     
     try {
-      const response = await fetch(`${baseUrl}/auth/refresh`, {
+      const response = await fetch(`${BASE_URL}/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ refresh_token: refreshToken })
+        // FIXED: Send the actual refresh token, not the base URL
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        credentials: 'include' // Include cookies in request
       })
       
       if (response.ok) {
         const data = await response.json()
-        localStorage.setItem('accessToken', data.access_token)
-        localStorage.setItem('refreshToken', data.refresh_token)
+        
+        // Store tokens in cookies and localStorage
+        storeTokens(data.access_token, data.refresh_token)
+        
         return true
       } else {
         // If refresh fails, clear tokens
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
+        clearTokens()
         return false
       }
     } catch (error) {
       console.error('Token refresh error:', error)
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
+      
+      // Clear tokens
+      clearTokens()
+      
       return false
     }
   }
