@@ -1,5 +1,5 @@
 import { 
-  getToken, 
+  getAccessToken, 
   getRefreshToken, 
   storeTokens, 
   clearTokens 
@@ -23,7 +23,7 @@ export class ApiService {
     
     // Only add authorization header in client-side
     if (process.client) {
-      const token = getToken()
+      const token = getAccessToken()
       if (token) {
         defaultHeaders['Authorization'] = `Bearer ${token}`
       }
@@ -33,7 +33,7 @@ export class ApiService {
     const options: RequestInit = {
       method,
       headers: defaultHeaders,
-      credentials: 'include', // Include cookies in request (critical for cross-domain auth)
+      credentials: 'include', // Include cookies in request
     }
     
     if (data && method !== 'GET') {
@@ -41,16 +41,20 @@ export class ApiService {
     }
     
     try {
+      console.log(`API Request: ${method} ${endpoint}`, data ? 'With data' : 'No data')
       const response = await fetch(url, options)      
       // Check if the response is 401 Unauthorized
       if (response.status === 401 && process.client) {
+        console.log('Received 401 unauthorized, attempting token refresh')
         // Try to refresh the token
         const refreshed = await this.refreshToken()
         
         if (refreshed) {
+          console.log('Token refreshed, retrying original request')
           // Retry the request with the new token
           return this.request(endpoint, method, data, headers)
         } else {
+          console.log('Token refresh failed, redirecting to login')
           // Redirect to login
           window.location.href = '/login'
           throw new Error('Sesión expirada')
@@ -96,28 +100,39 @@ export class ApiService {
     const refreshToken = getRefreshToken()
     
     if (!refreshToken) {
+      console.log('No refresh token available for refresh attempt')
       return false
     }
     
     try {
+      console.log('Sending refresh token request')
       const response = await fetch(`${BASE_URL}/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        // FIXED: Send the actual refresh token, not the base URL
         body: JSON.stringify({ refresh_token: refreshToken }),
         credentials: 'include' // Include cookies in request
       })
       
       if (response.ok) {
         const data = await response.json()
+        console.log('Refresh token response:', data ? 'Success' : 'Empty response')
         
-        // Store tokens in cookies and localStorage
-        storeTokens(data.access_token, data.refresh_token)
-        
-        return true
+        if (data.access_token || data.accessToken) {
+          // Store tokens in a way both applications understand
+          storeTokens(
+            data.access_token || data.accessToken,
+            data.refresh_token || data.refreshToken
+          )
+          return true
+        } else {
+          console.error('Refresh token response missing tokens')
+          clearTokens()
+          return false
+        }
       } else {
+        console.error('Refresh token request failed:', response.status, response.statusText)
         // If refresh fails, clear tokens
         clearTokens()
         return false

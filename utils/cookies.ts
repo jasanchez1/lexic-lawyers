@@ -1,4 +1,8 @@
 /**
+ * Utility functions for managing auth tokens across domains
+ */
+
+/**
  * Set a cookie with domain support for cross-subdomain sharing
  */
 export const setCookie = (name: string, value: string, days: number, domain: string = '') => {
@@ -36,7 +40,7 @@ export const setCookie = (name: string, value: string, days: number, domain: str
    * Delete a cookie
    */
   export const deleteCookie = (name: string, domain: string = '') => {
-    if (!process.client) return;
+    if (!process.client) return null;
     
     // Set to expired date in the past to delete
     const domainString = domain ? `; domain=${domain}` : '';
@@ -68,54 +72,108 @@ export const setCookie = (name: string, value: string, days: number, domain: str
   };
   
   /**
-   * Get the token from either cookie or localStorage
-   * This provides compatibility with both auth methods
+   * Get the access token from any available source
+   * This handles both storage formats across the sites
    */
-  export const getToken = () => {
+  export const getAccessToken = () => {
     if (!process.client) return null;
     
-    // Try cookie first, then localStorage
-    return getCookie('accessToken') || localStorage.getItem('accessToken');
+    // Try cookie first
+    const cookieToken = getCookie('accessToken');
+    if (cookieToken) return cookieToken;
+    
+    // Try current site's localStorage format
+    const directToken = localStorage.getItem('accessToken');
+    if (directToken) return directToken;
+    
+    // Try parent site's localStorage format (JSON structure)
+    const authTokensJson = localStorage.getItem('auth_tokens');
+    if (authTokensJson) {
+      try {
+        const authTokens = JSON.parse(authTokensJson);
+        return authTokens.access_token;
+      } catch (e) {
+        console.error('Error parsing auth_tokens from localStorage', e);
+      }
+    }
+    
+    return null;
   };
   
   /**
-   * Get the refresh token from either cookie or localStorage
+   * Get the refresh token from any available source
+   * This handles both storage formats across the sites
    */
   export const getRefreshToken = () => {
     if (!process.client) return null;
     
-    // Try cookie first, then localStorage
-    return getCookie('refreshToken') || localStorage.getItem('refreshToken');
+    // Try cookie first
+    const cookieToken = getCookie('refreshToken');
+    if (cookieToken) return cookieToken;
+    
+    // Try current site's localStorage format
+    const directToken = localStorage.getItem('refreshToken');
+    if (directToken) return directToken;
+    
+    // Try parent site's localStorage format (JSON structure)
+    const authTokensJson = localStorage.getItem('auth_tokens');
+    if (authTokensJson) {
+      try {
+        const authTokens = JSON.parse(authTokensJson);
+        return authTokens.refresh_token;
+      } catch (e) {
+        console.error('Error parsing auth_tokens from localStorage', e);
+      }
+    }
+    
+    return null;
   };
   
   /**
-   * Store tokens in both cookie and localStorage
+   * Store tokens in a way that both applications can understand
    */
   export const storeTokens = (accessToken: string, refreshToken: string) => {
     if (!process.client) return;
     
-    // Store in cookies with root domain for cross-subdomain sharing
     const rootDomain = getRootDomain();
-    setCookie('accessToken', accessToken, 1, rootDomain); // 1 day expiry for access token
-    setCookie('refreshToken', refreshToken, 30, rootDomain); // 30 days for refresh token
     
-    // Also store in localStorage for older browsers or fallback
+    // Set cookies at root domain level for sharing
+    setCookie('accessToken', accessToken, 1, rootDomain);
+    setCookie('refreshToken', refreshToken, 30, rootDomain);
+    
+    // Store in current site format (direct keys)
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
+    
+    // Also store in parent site format (JSON structure)
+    const authTokens = {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_in: 1800, // Default to 30 min
+      token_type: 'bearer',
+      user_id: '', // This will be filled by the parent app if needed
+      expires_at: new Date(Date.now() + 1800 * 1000).toISOString()
+    };
+    
+    localStorage.setItem('auth_tokens', JSON.stringify(authTokens));
   };
   
   /**
-   * Clear all auth tokens
+   * Clear all tokens from all storage locations
    */
   export const clearTokens = () => {
     if (!process.client) return;
     
-    // Clear cookies
     const rootDomain = getRootDomain();
+    
+    // Clear cookies
     deleteCookie('accessToken', rootDomain);
     deleteCookie('refreshToken', rootDomain);
     
-    // Clear localStorage
+    // Clear current site format
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    
+    // Clear parent site format
+    localStorage.removeItem('auth_tokens');
   };

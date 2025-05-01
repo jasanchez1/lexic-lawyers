@@ -2,11 +2,10 @@ import { ref, readonly } from 'vue'
 import { useAuthService } from '~/services/auth-service'
 import { useLawyerService } from '~/services/lawyer-service'
 import { 
-  getToken, 
+  getAccessToken, 
   getRefreshToken, 
   storeTokens,
-  clearTokens,
-  getRootDomain
+  clearTokens
 } from '~/utils/cookies'
 
 // State that will be shared between component instances
@@ -27,9 +26,12 @@ export function useAuth() {
     try {
       const response = await authService.login(email, password)
       
-      if (response.access_token && response.refresh_token) {
-        // Store tokens in cookies and localStorage
-        storeTokens(response.access_token, response.refresh_token)
+      if (response.accessToken || response.access_token) {
+        // Store tokens in a way both sites understand
+        storeTokens(
+          response.accessToken || response.access_token, 
+          response.refreshToken || response.refresh_token
+        )
         
         // Get user info
         await fetchUserProfile()
@@ -81,7 +83,7 @@ export function useAuth() {
       user.value = userData
       
       // Check if user has lawyer profile
-      isLawyer.value = userData.is_lawyer
+      isLawyer.value = userData.is_lawyer || userData.isLawyer
       
       return userData
     } catch (err) {
@@ -96,40 +98,53 @@ export function useAuth() {
   const initAuth = async () => {
     isLoading.value = true
     
-    // Skip on server-side
-    if (!process.server) {
+    try {
+      console.log('Initializing auth...')
+      
+      // Skip on server-side
+      if (process.server) {
+        isLoading.value = false
+        return
+      }
+      
       // Check if we have a token
-      const token = getToken()
+      const token = getAccessToken()
+      console.log('Found token:', token ? 'Yes' : 'No')
       
       if (token) {
         try {
           // Check if the token is valid by fetching the user profile
           await fetchUserProfile()
           isAuthenticated.value = true
+          console.log('User profile fetched successfully, authenticated')
         } catch (err) {
+          console.error('Error fetching user profile, trying to refresh token:', err)
           // Token might be invalid, try to refresh
           const refreshed = await refreshToken()
-          if (!refreshed) {
-            console.error('Could not refresh token', err)
-          }
+          console.log('Token refresh result:', refreshed ? 'Success' : 'Failed')
         }
       } else {
         // Check if we can login via the API's status endpoint
         // This helps detect if we're authenticated via cookies from parent domain
         try {
+          console.log('Checking login status...')
           const isLoggedIn = await authService.isLoggedIn()
+          console.log('Login status check result:', isLoggedIn ? 'Logged in' : 'Not logged in')
           
           if (isLoggedIn) {
             await fetchUserProfile()
             isAuthenticated.value = true
+            console.log('Logged in via status check, user profile fetched')
           }
         } catch (err) {
           console.error('Error checking login status:', err)
         }
       }
+    } catch (err) {
+      console.error('Error in initAuth:', err)
+    } finally {
+      isLoading.value = false
     }
-    
-    isLoading.value = false
   }
 
   const refreshToken = async () => {
@@ -139,23 +154,33 @@ export function useAuth() {
     const refreshToken = getRefreshToken()
     
     if (!refreshToken) {
+      console.log('No refresh token found')
       isAuthenticated.value = false
       isLawyer.value = false
       return false
     }
     
     try {
+      console.log('Attempting to refresh token...')
       const response = await authService.refreshToken(refreshToken)
       
-      if (response.access_token && response.refresh_token) {
+      if ((response.accessToken || response.access_token) && 
+          (response.refreshToken || response.refresh_token)) {
+        console.log('Token refresh successful, storing new tokens')
         // Store the new tokens
-        storeTokens(response.access_token, response.refresh_token)
+        storeTokens(
+          response.accessToken || response.access_token,
+          response.refreshToken || response.refresh_token
+        )
         
         // Get user info
         await fetchUserProfile()
         
         isAuthenticated.value = true
         return true
+      } else {
+        console.error('Token refresh response missing tokens', response)
+        return false
       }
     } catch (err) {
       console.error('Token refresh error:', err)
@@ -164,9 +189,8 @@ export function useAuth() {
       clearTokens()
       isAuthenticated.value = false
       isLawyer.value = false
+      return false
     }
-    
-    return false
   }
 
   return {
