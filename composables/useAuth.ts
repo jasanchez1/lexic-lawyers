@@ -5,9 +5,9 @@ import {
   getAccessToken, 
   getRefreshToken, 
   storeTokens,
-  clearTokens,
-  getRootDomain
+  clearTokens
 } from '~/utils/cookies'
+import { processAuthTransfer } from '~/utils/auth-transfer'
 
 // State that will be shared between component instances
 const isAuthenticated = ref(false)
@@ -107,6 +107,12 @@ export function useAuth() {
       if (process.server) {
         isLoading.value = false
         return
+      }
+      
+      // Check for URL auth transfer first (new!)
+      const transferSuccess = processAuthTransfer()
+      if (transferSuccess) {
+        console.log('Auth transferred via URL parameter')
       }
       
       // Check if we have a token
