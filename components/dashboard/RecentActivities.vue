@@ -29,9 +29,6 @@
           <p class="text-sm text-gray-900">
             {{ activity.description }}
           </p>
-          <p class="text-xs text-gray-500 mt-1">
-            {{ formatTime(activity.timestamp) }}
-          </p>
         </div>
 
         <!-- Action button if available -->
@@ -68,43 +65,6 @@ const props = defineProps<{
   loading?: boolean;
 }>()
 
-// Format timestamp
-const formatTime = (timestamp: string) => {
-  const date = new Date(timestamp);
-
-  // If today, show only time
-  const today = new Date();
-  if (
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear()
-  ) {
-    return 'Hoy, ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-
-  // If yesterday
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (
-    date.getDate() === yesterday.getDate() &&
-    date.getMonth() === yesterday.getMonth() &&
-    date.getFullYear() === yesterday.getFullYear()
-  ) {
-    return 'Ayer, ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-
-  // If this week
-  const daysDiff = Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-  if (daysDiff < 7) {
-    return date.toLocaleDateString([], { weekday: 'long' }) + ', ' +
-      date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-
-  // Otherwise show full date
-  return date.toLocaleDateString() + ', ' +
-    date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
 // Get activity icon
 const getActivityIcon = (type: string) => {
   const icons: Record<string, any> = {
@@ -114,7 +74,7 @@ const getActivityIcon = (type: string) => {
     click: Clock
   }
 
-  return icons[type] || AlertCircle;
+  return icons[type] || AlertCircle
 }
 
 // Get activity icon background class
@@ -126,7 +86,7 @@ const getActivityIconClass = (type: string) => {
     click: 'bg-purple-50'
   }
 
-  return classes[type] || 'bg-gray-50';
+  return classes[type] || 'bg-gray-50'
 }
 
 // Get activity icon color
@@ -138,6 +98,6 @@ const getActivityIconColor = (type: string) => {
     click: 'text-purple-500'
   }
 
-  return colors[type] || 'text-gray-500';
+  return colors[type] || 'text-gray-500'
 }
 </script>

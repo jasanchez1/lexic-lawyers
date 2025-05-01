@@ -29,7 +29,7 @@ export function useRecentActivity() {
       
       const data = response.data;
       
-      // Create activities based on the API data
+      // Create activities based on the API data without timestamps claiming they're from today
       const generatedActivities: Activity[] = [];
 
       // Profile views activity
@@ -37,7 +37,7 @@ export function useRecentActivity() {
         generatedActivities.push({
           type: 'view',
           description: `Tu perfil ha sido visto ${data.counts.profile_views} veces`,
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          timestamp: new Date().toISOString(), // Keep ISO format but don't use in display
           actionUrl: '/statistics'
         });
       }
@@ -47,7 +47,7 @@ export function useRecentActivity() {
         generatedActivities.push({
           type: 'message',
           description: `Has recibido ${data.counts.messages_sent} mensajes`,
-          timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+          timestamp: new Date().toISOString(),
           actionUrl: '/messages'
         });
       }
@@ -57,7 +57,7 @@ export function useRecentActivity() {
         generatedActivities.push({
           type: 'impression',
           description: `Tu perfil apareció en ${data.counts.impressions} resultados de búsqueda`,
-          timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          timestamp: new Date().toISOString(),
           actionUrl: '/statistics'
         });
       }
@@ -67,7 +67,7 @@ export function useRecentActivity() {
         generatedActivities.push({
           type: 'click',
           description: `Tu perfil recibió ${data.counts.clicks} clics en búsquedas`,
-          timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+          timestamp: new Date().toISOString(),
           actionUrl: '/statistics'
         });
       }
