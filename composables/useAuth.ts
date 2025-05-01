@@ -5,7 +5,8 @@ import {
   getAccessToken, 
   getRefreshToken, 
   storeTokens,
-  clearTokens
+  clearTokens,
+  getRootDomain
 } from '~/utils/cookies'
 
 // State that will be shared between component instances
@@ -26,11 +27,12 @@ export function useAuth() {
     try {
       const response = await authService.login(email, password)
       
-      if (response.accessToken || response.access_token) {
-        // Store tokens in a way both sites understand
+      if (response.access_token) {
+        // Store tokens in localStorage in the same format as main site
         storeTokens(
-          response.accessToken || response.access_token, 
-          response.refreshToken || response.refresh_token
+          response.access_token, 
+          response.refresh_token,
+          response.expires_in
         )
         
         // Get user info
@@ -109,7 +111,7 @@ export function useAuth() {
       
       // Check if we have a token
       const token = getAccessToken()
-      console.log('Found token:', token ? 'Yes' : 'No')
+      console.log('Found access token:', token ? 'Yes' : 'No')
       
       if (token) {
         try {
@@ -124,10 +126,10 @@ export function useAuth() {
           console.log('Token refresh result:', refreshed ? 'Success' : 'Failed')
         }
       } else {
+        console.log('No access token found, checking API status')
         // Check if we can login via the API's status endpoint
-        // This helps detect if we're authenticated via cookies from parent domain
+        // This helps detect if we're authenticated via cookies
         try {
-          console.log('Checking login status...')
           const isLoggedIn = await authService.isLoggedIn()
           console.log('Login status check result:', isLoggedIn ? 'Logged in' : 'Not logged in')
           
@@ -164,13 +166,13 @@ export function useAuth() {
       console.log('Attempting to refresh token...')
       const response = await authService.refreshToken(refreshToken)
       
-      if ((response.accessToken || response.access_token) && 
-          (response.refreshToken || response.refresh_token)) {
+      if (response.access_token && response.refresh_token) {
         console.log('Token refresh successful, storing new tokens')
         // Store the new tokens
         storeTokens(
-          response.accessToken || response.access_token,
-          response.refreshToken || response.refresh_token
+          response.access_token,
+          response.refresh_token,
+          response.expires_in
         )
         
         // Get user info

@@ -33,7 +33,7 @@ export class ApiService {
     const options: RequestInit = {
       method,
       headers: defaultHeaders,
-      credentials: 'include', // Include cookies in request
+      credentials: 'include', // Include cookies in request (for cross-origin requests)
     }
     
     if (data && method !== 'GET') {
@@ -43,6 +43,7 @@ export class ApiService {
     try {
       console.log(`API Request: ${method} ${endpoint}`, data ? 'With data' : 'No data')
       const response = await fetch(url, options)      
+      
       // Check if the response is 401 Unauthorized
       if (response.status === 401 && process.client) {
         console.log('Received 401 unauthorized, attempting token refresh')
@@ -119,11 +120,12 @@ export class ApiService {
         const data = await response.json()
         console.log('Refresh token response:', data ? 'Success' : 'Empty response')
         
-        if (data.access_token || data.accessToken) {
-          // Store tokens in a way both applications understand
+        if (data.access_token && data.refresh_token) {
+          // Store tokens in the same format as main site
           storeTokens(
-            data.access_token || data.accessToken,
-            data.refresh_token || data.refreshToken
+            data.access_token,
+            data.refresh_token,
+            data.expires_in
           )
           return true
         } else {
