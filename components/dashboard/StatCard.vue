@@ -1,41 +1,44 @@
 <template>
     <div class="bg-white rounded-lg shadow-sm border p-6">
         <div class="flex items-center justify-between mb-3">
-            <h3 class="text-sm font-medium text-gray-500">{{ title }}</h3>
+            <div class="flex items-center">
+                <h3 class="text-sm font-medium text-gray-500">{{ title }}</h3>
+                <!-- Add tooltip for certain metrics -->
+                <button v-if="tooltip" class="ml-1 text-gray-400 hover:text-gray-600" @mouseover="showTooltip = true"
+                    @mouseleave="showTooltip = false">
+                    <HelpCircle class="w-4 h-4" />
+                    <div v-if="showTooltip"
+                        class="absolute z-10 w-64 p-2 mt-2 text-sm text-left text-white bg-gray-800 rounded-md shadow-lg">
+                        {{ tooltip }}
+                    </div>
+                </button>
+            </div>
             <div class="p-2 rounded-md" :class="iconBgClass">
                 <component :is="iconComponent" class="w-5 h-5" :class="iconColorClass" />
             </div>
         </div>
 
-        <div class="flex items-end">
-            <div v-if="isRating" class="flex items-center">
-                <span class="text-2xl font-bold mr-2">{{ value }}</span>
-                <div class="flex">
-                    <Star v-for="i in 5" :key="i" class="w-4 h-4" :class="[
-                        i <= Math.floor(value) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 fill-gray-300'
-                    ]" />
-                </div>
+        <div class="space-y-1">
+            <div class="text-2xl font-bold">
+                {{ formattedValue }}
             </div>
-            <div v-else class="text-2xl font-bold">{{ formattedValue }}</div>
 
-            <div v-if="trend && percentage" class="ml-2 flex items-center text-sm" :class="trendColorClass">
-                <component :is="trend === 'up' ? 'TrendingUp' : 'TrendingDown'" class="w-4 h-4 mr-1" />
-                <span>{{ percentage }}%</span>
+            <div v-if="previousValue !== undefined" class="flex items-center">
+                <component :is="trendIcon" class="w-4 h-4 mr-1" :class="trendColorClass" />
+                <span class="text-sm" :class="trendColorClass">
+                    {{ trendPercentage }}% {{ trendDirection === 'up' ? 'más' : 'menos' }} que antes
+                </span>
             </div>
         </div>
-
-        <slot></slot>
     </div>
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import {
-    Eye, HelpCircle, MessageCircle, Star, TrendingUp, TrendingDown,
-    User, Users, Phone,
-    Activity, BarChart, Briefcase, FileText, Mail,
-    Calendar, Check, DollarSign, Clock, AlertCircle
+    Eye, Users, MessageSquare, TrendingUp, TrendingDown,
+    BarChart, Clock, CheckCircle, Activity, Phone, HelpCircle
 } from 'lucide-vue-next'
-import { computed } from 'vue'
 
 const props = defineProps({
     title: {
@@ -43,58 +46,85 @@ const props = defineProps({
         required: true
     },
     value: {
-        type: [Number, String],
+        type: Number,
         required: true
+    },
+    previousValue: {
+        type: Number,
+        default: undefined
+    },
+    isPercentage: {
+        type: Boolean,
+        default: false
     },
     icon: {
         type: String,
         default: 'Activity'
     },
-    trend: {
+    tooltip: {
         type: String,
-        validator: (value: string) => ['up', 'down', null, undefined].includes(value)
-    },
-    percentage: {
-        type: Number,
-        default: null
-    },
-    isRating: {
-        type: Boolean,
-        default: false
+        default: ''
     }
 })
 
-// Format value (add thousands separators)
+const showTooltip = ref(false)
+
+// Format value with locale and handle percentages
 const formattedValue = computed(() => {
     if (props.value === undefined || props.value === null) {
-        return '0';
+        return props.isPercentage ? '0.0%' : '0';
     }
-    if (typeof props.value === 'number') {
-        return props.value.toLocaleString()
+
+    if (props.isPercentage) {
+        return `${props.value.toFixed(1)}%`
     }
-    return props.value
+
+    return props.value.toLocaleString()
+})
+
+// Calculate trend
+const trendDirection = computed(() => {
+    if (props.previousValue === undefined) return null
+
+    return props.value >= props.previousValue ? 'up' : 'down'
+})
+
+// Trend icon component
+const trendIcon = computed(() => {
+    return trendDirection.value === 'up' ? TrendingUp : TrendingDown
+})
+
+// Calculate trend percentage
+const trendPercentage = computed(() => {
+    if (props.previousValue === undefined || props.previousValue === 0) return 0
+
+    const diff = props.value - props.previousValue
+    const percentage = (Math.abs(diff) / props.previousValue) * 100
+
+    return percentage.toFixed(1)
+})
+
+// Trend color class
+const trendColorClass = computed(() => {
+    // Only show green for positive trends if they're good (avoid green for increased bounce rate, etc.)
+    const isPositiveTrend = trendDirection.value === 'up'
+
+    return isPositiveTrend ? 'text-green-500' : 'text-red-500'
 })
 
 // Determine icon component
 const iconComponent = computed(() => {
     const icons: Record<string, any> = {
         Eye,
-        HelpCircle,
-        MessageCircle,
-        Star,
-        User,
         Users,
-        Phone,
-        Activity,
+        MessageSquare,
+        TrendingUp,
         BarChart,
-        Briefcase,
-        FileText,
-        Mail,
-        Calendar,
-        Check,
-        DollarSign,
         Clock,
-        AlertCircle
+        CheckCircle,
+        Activity,
+        Phone,
+        HelpCircle
     }
 
     return icons[props.icon] || Activity
@@ -104,22 +134,14 @@ const iconComponent = computed(() => {
 const iconBgClass = computed(() => {
     const colors: Record<string, string> = {
         Eye: 'bg-blue-50',
-        HelpCircle: 'bg-purple-50',
-        MessageCircle: 'bg-green-50',
-        Star: 'bg-yellow-50',
-        User: 'bg-indigo-50',
-        Users: 'bg-pink-50',
-        Phone: 'bg-teal-50',
-        Activity: 'bg-red-50',
+        Users: 'bg-purple-50',
+        MessageSquare: 'bg-green-50',
+        TrendingUp: 'bg-yellow-50',
         BarChart: 'bg-blue-50',
-        Briefcase: 'bg-gray-50',
-        FileText: 'bg-indigo-50',
-        Mail: 'bg-purple-50',
-        Calendar: 'bg-green-50',
-        Check: 'bg-emerald-50',
-        DollarSign: 'bg-yellow-50',
         Clock: 'bg-orange-50',
-        AlertCircle: 'bg-red-50'
+        CheckCircle: 'bg-green-50',
+        Activity: 'bg-red-50',
+        Phone: 'bg-indigo-50'
     }
 
     return colors[props.icon] || 'bg-gray-50'
@@ -129,29 +151,16 @@ const iconBgClass = computed(() => {
 const iconColorClass = computed(() => {
     const colors: Record<string, string> = {
         Eye: 'text-blue-500',
-        HelpCircle: 'text-purple-500',
-        MessageCircle: 'text-green-500',
-        Star: 'text-yellow-500',
-        User: 'text-indigo-500',
-        Users: 'text-pink-500',
-        Phone: 'text-teal-500',
-        Activity: 'text-red-500',
+        Users: 'text-purple-500',
+        MessageSquare: 'text-green-500',
+        TrendingUp: 'text-yellow-500',
         BarChart: 'text-blue-500',
-        Briefcase: 'text-gray-700',
-        FileText: 'text-indigo-500',
-        Mail: 'text-purple-500',
-        Calendar: 'text-green-500',
-        Check: 'text-emerald-500',
-        DollarSign: 'text-yellow-500',
         Clock: 'text-orange-500',
-        AlertCircle: 'text-red-500'
+        CheckCircle: 'text-green-500',
+        Activity: 'text-red-500',
+        Phone: 'text-indigo-500'
     }
 
     return colors[props.icon] || 'text-gray-500'
-})
-
-// Trend color
-const trendColorClass = computed(() => {
-    return props.trend === 'up' ? 'text-green-500' : 'text-red-500'
 })
 </script>

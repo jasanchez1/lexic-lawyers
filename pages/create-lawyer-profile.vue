@@ -217,7 +217,7 @@
             <div class="space-y-6">
               <div>
                 <label for="start-date" class="block text-sm font-medium text-gray-700 mb-1">
-                  Fecha de inicio como abogado
+                  Fecha de obtención del título de abogado
                 </label>
                 <input
                   id="start-date"

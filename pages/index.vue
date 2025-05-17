@@ -18,13 +18,15 @@
         trend="up"
         :percentage="8.2"
         icon="Eye"
+        tooltip="Número de personas que han visitado tu perfil completo"
       />
       <DashboardStatCard
-        title="Impresiones"
+        title="Apariciones en Búsqueda"
         :value="stats.profileImpressions"
         trend="up"
         :percentage="12.5"
         icon="Users"
+        tooltip="Veces que tu perfil ha aparecido en resultados de búsqueda"
       />
       <DashboardStatCard
         title="Mensajes Recibidos"
@@ -38,6 +40,7 @@
         :value="stats.messageRate"
         icon="BarChart"
         is-percentage
+        tooltip="Porcentaje de visitantes que te envían un mensaje después de ver tu perfil"
       />
     </div>
 

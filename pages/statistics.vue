@@ -34,18 +34,45 @@
     <div v-else-if="statsData">
       <!-- Key Metrics -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatsMetricsCard title="Vistas de Perfil" :value="statsData.data.counts.profile_views || 0" icon="Eye" />
-        <StatsMetricsCard title="Impresiones" :value="statsData.data.counts.impressions || 0" icon="Users" />
-        <StatsMetricsCard title="Mensajes" :value="statsData.data.counts.messages_sent || 0" icon="MessageSquare" />
-        <StatsMetricsCard title="Tasa de Mensajes" :value="statsData.data.rates.message_rate || 0" isPercentage
-          icon="TrendingUp" />
+        <StatsMetricsCard 
+          title="Vistas de Perfil" 
+          :value="statsData.data.counts.profile_views || 0" 
+          icon="Eye" 
+          tooltip="Número de personas que han visitado tu perfil completo" 
+        />
+        <StatsMetricsCard 
+          title="Apariciones en Búsqueda" 
+          :value="statsData.data.counts.impressions || 0" 
+          icon="Users" 
+          tooltip="Veces que tu perfil ha aparecido en los resultados de búsqueda de clientes potenciales" 
+        />
+        <StatsMetricsCard 
+          title="Mensajes" 
+          :value="statsData.data.counts.messages_sent || 0" 
+          icon="MessageSquare" 
+        />
+        <StatsMetricsCard 
+          title="Tasa de Mensajes" 
+          :value="statsData.data.rates.message_rate || 0" 
+          isPercentage
+          icon="TrendingUp" 
+          tooltip="Porcentaje de visitantes que te envían un mensaje después de ver tu perfil" 
+        />
       </div>
 
       <!-- Position Data -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <!-- Impression Position Data -->
         <div class="bg-white rounded-lg shadow-sm border p-6">
-          <h2 class="text-lg font-medium mb-4">Impresiones por Posición</h2>
+          <div class="flex items-center mb-4">
+            <h2 class="text-lg font-medium">Apariciones por Posición</h2>
+            <button class="ml-1 text-gray-400 hover:text-gray-600" @mouseover="showImpressionsTooltip = true" @mouseleave="showImpressionsTooltip = false">
+              <HelpCircle class="w-4 h-4" />
+              <div v-if="showImpressionsTooltip" class="absolute z-10 w-64 p-2 mt-2 text-sm text-left text-white bg-gray-800 rounded-md shadow-lg">
+                Muestra cuántas veces tu perfil ha aparecido en diferentes posiciones de los resultados de búsqueda
+              </div>
+            </button>
+          </div>
           <div class="space-y-4">
             <div v-for="(value, position) in statsData.data.position_data.impression_stats" :key="position"
               class="flex items-center">
@@ -63,7 +90,15 @@
 
         <!-- Click through rate by position -->
         <div class="bg-white rounded-lg shadow-sm border p-6">
-          <h2 class="text-lg font-medium mb-4">CTR por Posición</h2>
+          <div class="flex items-center mb-4">
+            <h2 class="text-lg font-medium">Tasa de Clics por Posición</h2>
+            <button class="ml-1 text-gray-400 hover:text-gray-600" @mouseover="showCTRTooltip = true" @mouseleave="showCTRTooltip = false">
+              <HelpCircle class="w-4 h-4" />
+              <div v-if="showCTRTooltip" class="absolute z-10 w-64 p-2 mt-2 text-sm text-left text-white bg-gray-800 rounded-md shadow-lg">
+                Porcentaje de veces que los usuarios hacen clic en tu perfil al verlo en los resultados de búsqueda, según tu posición
+              </div>
+            </button>
+          </div>
           <div class="space-y-4">
             <div v-for="(rate, position) in statsData.data.position_data.ctr_by_position" :key="position"
               class="flex items-center">
@@ -157,10 +192,15 @@
 import { ref, computed, onMounted } from 'vue'
 import { useStatsService } from '~/services/stats-service'
 import { useNotifications } from '~/composables/useNotifications'
+import { HelpCircle } from 'lucide-vue-next'
 
 definePageMeta({
   middleware: ['lawyer-auth']
 })
+
+// Tooltips state
+const showImpressionsTooltip = ref(false)
+const showCTRTooltip = ref(false)
 
 // Service instances
 const statsService = useStatsService()
