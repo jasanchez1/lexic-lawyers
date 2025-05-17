@@ -17,14 +17,18 @@ const isLoading = ref(true)
 const error = ref(null)
 
 export function useAuth() {
-  const authService = useAuthService()
-  const lawyerService = useLawyerService()
+  // Function to get the AuthService inside a component context
+  const getAuthService = () => useAuthService();
+  
+  // Function to get the LawyerService inside a component context
+  const getLawyerService = () => useLawyerService();
   
   const login = async (email: string, password: string) => {
     isLoading.value = true
     error.value = null
     
     try {
+      const authService = getAuthService();
       const response = await authService.login(email, password)
       
       if (response.access_token) {
@@ -45,8 +49,17 @@ export function useAuth() {
       }
     } catch (err) {
       console.error('Login error:', err)
-      error.value = err.message || 'Error de autenticación'
-      return { success: false, error: error.value }
+      let errorMessage = 'Error de autenticación';
+      
+      // Properly format the error
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'object' && err !== null) {
+        errorMessage = err.toString();
+      }
+      
+      error.value = errorMessage;
+      return { success: false, error: errorMessage }
     } finally {
       isLoading.value = false
     }
@@ -61,6 +74,7 @@ export function useAuth() {
       
       if (refreshToken) {
         // Call the logout endpoint
+        const authService = getAuthService();
         await authService.logout(refreshToken)
       }
     } catch (err) {
@@ -81,6 +95,7 @@ export function useAuth() {
     isLoading.value = true
     
     try {
+      const authService = getAuthService();
       const userData = await authService.getCurrentUser()
       user.value = userData
       
@@ -90,7 +105,7 @@ export function useAuth() {
       return userData
     } catch (err) {
       console.error('Error fetching user profile:', err)
-      error.value = err.message || 'Error al obtener perfil'
+      error.value = err instanceof Error ? err.message : 'Error al obtener perfil'
       return null
     } finally {
       isLoading.value = false
@@ -136,6 +151,7 @@ export function useAuth() {
         // Check if we can login via the API's status endpoint
         // This helps detect if we're authenticated via cookies
         try {
+          const authService = getAuthService();
           const isLoggedIn = await authService.isLoggedIn()
           console.log('Login status check result:', isLoggedIn ? 'Logged in' : 'Not logged in')
           
@@ -170,6 +186,7 @@ export function useAuth() {
     
     try {
       console.log('Attempting to refresh token...')
+      const authService = getAuthService();
       const response = await authService.refreshToken(refreshToken)
       
       if (response.access_token && response.refresh_token) {

@@ -80,10 +80,13 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useQuestions } from '~/composables/useQuestions'
 import { useProfile } from '~/composables/useProfile'
+import { useRouter } from 'vue-router'
 
 definePageMeta({
     middleware: ['lawyer-auth']
 })
+
+const router = useRouter()
 
 // Pagination state
 const currentPage = ref(1)
@@ -166,7 +169,13 @@ const changePage = (page: number) => {
 
 // Handle answer question button
 const handleAnswerQuestion = (questionId: string) => {
-    navigateTo(`/questions/${questionId}`)
+    if (!questionId) {
+        console.error('No question ID provided for navigation');
+        return;
+    }
+    
+    // Use router.push to navigate with a proper route
+    router.push(`/questions/${questionId}`);
 }
 
 // Reset filters

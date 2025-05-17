@@ -2,8 +2,7 @@ import { ref } from "vue";
 import { useAnswersService } from "~/services/answers-service";
 
 export function useAnswers() {
-  const answersService = useAnswersService();
-
+  // State variables
   const answers = ref([]);
   const isLoading = ref(false);
   const error = ref(null);
@@ -14,6 +13,8 @@ export function useAnswers() {
     error.value = null;
 
     try {
+      // Create the service instance inside the function to ensure it's created in the correct context
+      const answersService = useAnswersService();
       const response = await answersService.getAnswers(questionId);
       answers.value = response || [];
       return answers.value;
@@ -30,6 +31,7 @@ export function useAnswers() {
   // Create a new answer
   const createAnswer = async (questionId: string, data: any) => {
     try {
+      const answersService = useAnswersService();
       const response = await answersService.createAnswer(questionId, data);
 
       // Add the new answer to the list and sort by date (newest first)
@@ -47,6 +49,7 @@ export function useAnswers() {
   // Update an answer
   const updateAnswer = async (answerId: string, data: any) => {
     try {
+      const answersService = useAnswersService();
       const response = await answersService.updateAnswer(answerId, data);
 
       // Update the answer in the list
@@ -65,6 +68,7 @@ export function useAnswers() {
   // Delete an answer
   const deleteAnswer = async (answerId: string) => {
     try {
+      const answersService = useAnswersService();
       await answersService.deleteAnswer(answerId);
 
       // Remove the answer from the list
@@ -80,6 +84,7 @@ export function useAnswers() {
   // Create a reply to an answer
   const createReply = async (answerId: string, data: any) => {
     try {
+      const answersService = useAnswersService();
       const response = await answersService.createReply(answerId, data);
 
       // Add the reply to the answer

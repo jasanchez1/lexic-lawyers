@@ -9,6 +9,12 @@ export function useQuestionDetail() {
   const error = ref(null)
   
   const fetchQuestion = async (id: string) => {
+    if (!id) {
+      console.error('No question ID provided for fetching');
+      error.value = 'ID de pregunta no válido';
+      return null;
+    }
+
     isLoading.value = true
     error.value = null
     

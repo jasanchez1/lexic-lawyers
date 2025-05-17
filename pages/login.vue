@@ -61,7 +61,7 @@
               class="flex w-full justify-center rounded-md border border-transparent bg-primary-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
               :disabled="isLoading"
             >
-              <span v-if="isLoading">
+              <span v-if="isLoading" class="flex items-center">
                 <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -97,46 +97,75 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuth } from '../composables/useAuth'
+import { ref } from 'vue';
 
 definePageMeta({
   layout: false
-})
+});
 
-const router = useRouter()
-const isLoading = ref(false)
-const errorMsg = ref(null)
-const email = ref('')
-const password = ref('')
-const rememberMe = ref(false)
-const { login } = useAuth()
+const isLoading = ref(false);
+const errorMsg = ref(null);
+const email = ref('');
+const password = ref('');
+const rememberMe = ref(false);
 
-const handleLogin = async () => {
-  
-  if (!email.value || !password.value) {
-    errorMsg.value = 'Por favor ingrese su email y contraseña'
-    return
+// Get the auth composable inside the setup function
+const { login } = useAuth();
+
+// Helper function to stringify objects for display
+const formatErrorMessage = (error) => {
+  if (error === null || error === undefined) {
+    return 'Error desconocido';
   }
   
-  isLoading.value = true
-  errorMsg.value = null
+  if (typeof error === 'string') {
+    return error;
+  }
+  
+  if (typeof error === 'object') {
+    // Try to extract a message property
+    if (error.message) {
+      return error.message;
+    }
+    
+    // Try to convert the object to a readable string
+    try {
+      return JSON.stringify(error);
+    } catch (e) {
+      // If JSON stringify fails
+      return 'Error de autenticación';
+    }
+  }
+  
+  // Fallback
+  return String(error);
+};
+
+const handleLogin = async () => {
+  if (!email.value || !password.value) {
+    errorMsg.value = 'Por favor ingrese su email y contraseña';
+    return;
+  }
+  
+  isLoading.value = true;
+  errorMsg.value = null;
   
   try {
-    const result = await login(email.value, password.value)
+    const result = await login(email.value, password.value);
     
     if (result.success) {
       // Redirect to dashboard
-      navigateTo('/')
+      navigateTo('/');
     } else {
-      errorMsg.value = result.error || 'Error durante el inicio de sesión'
+      // Use our helper function to format the error
+      errorMsg.value = formatErrorMessage(result.error) || 'Usuario o contraseña incorrectos';
     }
   } catch (err) {
-    console.error('Login error:', err)
-    errorMsg.value = err.message || 'Error durante el inicio de sesión'
+    console.error('Login error:', err);
+    // Use our helper function for the caught error as well
+    errorMsg.value = formatErrorMessage(err) || 'Error durante el inicio de sesión';
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
-}
+};
 </script>
