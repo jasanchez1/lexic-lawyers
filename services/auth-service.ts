@@ -1,35 +1,60 @@
-
 import { ApiService } from './api'
 import type { TokenResponse, User } from '~/types/user'
 
 export class AuthService extends ApiService {
   async login(email: string, password: string): Promise<TokenResponse> {
     try {
-      return await this.request<TokenResponse>('/auth/login', 'POST', { email, password });
+      // Call the login endpoint
+      const url = `${this.getBaseUrl()}/auth/login`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include'
+      });
+      
+      // Check for error response
+      if (!response.ok) {
+        const errorData = await response.json();
+        // Extract the detail message if available
+        if (errorData && errorData.detail) {
+          throw new Error(errorData.detail);
+        }
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
+      // Parse successful response
+      const data = await response.json();
+      return data;
     } catch (error) {
-      // Transform the error for better display
+      console.error('Login error in AuthService:', error);
+      
+      // Re-throw with better formatting
       if (error instanceof Error) {
-        // If it's already an Error object, just rethrow it
         throw error;
       } else if (typeof error === 'object' && error !== null) {
-        // If it's an object but not an Error, try to get a message property
-        if (error.message) {
-          throw new Error(error.message);
-        } else if (error.detail) {
+        if (error.detail) {
           throw new Error(error.detail);
         } else {
-          // Try to stringify the object for display
-          try {
-            throw new Error(JSON.stringify(error));
-          } catch (e) {
-            // If JSON stringify fails
-            throw new Error('Error de autenticación. Credenciales inválidas.');
-          }
+          throw new Error('Credenciales inválidas');
         }
       } else {
-        // If it's not an object, convert to string
-        throw new Error(String(error) || 'Error de autenticación. Credenciales inválidas.');
+        throw new Error('Error de autenticación');
       }
+    }
+  }
+  
+  // Get base URL from runtime config
+  private getBaseUrl(): string {
+    // Get config for base URL
+    try {
+      const config = useRuntimeConfig();
+      return config.public.apiBaseUrl || 'http://localhost:8000';
+    } catch (error) {
+      console.error('Error getting config:', error);
+      return 'http://localhost:8000';
     }
   }
   

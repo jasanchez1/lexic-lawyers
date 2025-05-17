@@ -112,33 +112,56 @@ const rememberMe = ref(false);
 // Get the auth composable inside the setup function
 const { login } = useAuth();
 
-// Helper function to stringify objects for display
+// Helper function to translate and format error messages
 const formatErrorMessage = (error) => {
+  // First extract the error message as a string
+  let errorText;
+  
   if (error === null || error === undefined) {
-    return 'Error desconocido';
+    errorText = 'Error desconocido';
+    return errorText;
   }
   
   if (typeof error === 'string') {
-    return error;
+    errorText = error;
+  } else if (typeof error === 'object') {
+    // Try to extract detail or message property
+    if (error.detail) {
+      errorText = error.detail;
+    } else if (error.message) {
+      errorText = error.message;
+    } else {
+      // Try to convert the object to a readable string
+      try {
+        errorText = JSON.stringify(error);
+      } catch (e) {
+        // If JSON stringify fails
+        return 'Error de autenticación';
+      }
+    }
+  } else {
+    // Fallback
+    errorText = String(error);
   }
   
-  if (typeof error === 'object') {
-    // Try to extract a message property
-    if (error.message) {
-      return error.message;
-    }
-    
-    // Try to convert the object to a readable string
-    try {
-      return JSON.stringify(error);
-    } catch (e) {
-      // If JSON stringify fails
-      return 'Error de autenticación';
-    }
-  }
+  // Translate common error messages from English to Spanish
+  const errorTranslations = {
+    'Invalid authentication credentials': 'Credenciales de autenticación inválidas',
+    'Authentication failed': 'Autenticación fallida',
+    'User not found': 'Usuario no encontrado',
+    'Invalid password': 'Contraseña inválida',
+    'Not authorized': 'No autorizado',
+    'Invalid username or password': 'Usuario o contraseña incorrectos',
+    'Authorization failed': 'Autorización fallida',
+    'Invalid credentials': 'Credenciales inválidas',
+    'Username or password is incorrect': 'Usuario o contraseña incorrectos',
+    'User is not active': 'Usuario no está activo',
+    'Error logging in': 'Error al iniciar sesión',
+    'Login failed': 'Inicio de sesión fallido'
+  };
   
-  // Fallback
-  return String(error);
+  // Return translated message or original if no translation exists
+  return errorTranslations[errorText] || errorText;
 };
 
 const handleLogin = async () => {
@@ -157,12 +180,12 @@ const handleLogin = async () => {
       // Redirect to dashboard
       navigateTo('/');
     } else {
-      // Use our helper function to format the error
+      // Translate and format the error
       errorMsg.value = formatErrorMessage(result.error) || 'Usuario o contraseña incorrectos';
     }
   } catch (err) {
     console.error('Login error:', err);
-    // Use our helper function for the caught error as well
+    // Also translate any caught errors
     errorMsg.value = formatErrorMessage(err) || 'Error durante el inicio de sesión';
   } finally {
     isLoading.value = false;
