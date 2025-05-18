@@ -1,5 +1,6 @@
 import { ApiService } from "./api";
 import type { Lawyer, Education, WorkExperience, Achievement, LawyerDocument } from "~/types/lawyer";
+import { getAccessToken } from "~/utils/cookies";
 
 export class LawyerService extends ApiService {
   async getLawyerProfile(lawyerId: string) {
@@ -21,51 +22,108 @@ export class LawyerService extends ApiService {
 
   // Upload lawyer documents
   async uploadLawyerDocument(lawyerId: string, documentData: FormData) {
-    const token = await this.getAccessToken();
-    const config = useRuntimeConfig();
-    const BASE_URL = config.public.apiBaseUrl || 'http://localhost:8000';
-    
-    const response = await fetch(`${BASE_URL}/api/lawyers/${lawyerId}/documents`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
-      body: documentData
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Error ${response.status}: ${response.statusText}`);
+    try {
+      const config = useRuntimeConfig();
+      const BASE_URL = config.public.apiBaseUrl || 'http://localhost:8000';
+      const url = `${BASE_URL}/lawyers/${lawyerId}/documents`;
+      
+      // Use the common request method from ApiService
+      return this.requestFormData<any>(url, 'POST', documentData);
+    } catch (error) {
+      console.error('Error in uploadLawyerDocument:', error);
+      throw error;
     }
-    
-    return response.json();
+  }
+  
+  // Request method for form data
+  protected async requestFormData<T>(
+    endpoint: string,
+    method: string = "POST",
+    formData: FormData,
+  ): Promise<T> {
+    // Get base URL from runtime config
+    const config = useRuntimeConfig();
+    const BASE_URL = config.public.apiBaseUrl || "http://localhost:8000";
+
+    const defaultHeaders: Record<string, string> = {};
+
+    // Only add authorization header in client-side
+    if (process.client) {
+      const token = getAccessToken();
+      if (token) {
+        defaultHeaders["Authorization"] = `Bearer ${token}`;
+      }
+    }
+
+    const url = endpoint.startsWith('http') ? endpoint : `${BASE_URL}${endpoint}`;
+    const options: RequestInit = {
+      method,
+      headers: defaultHeaders,
+      credentials: "include", // Include cookies in request (for cross-origin requests)
+      body: formData
+    };
+
+    try {
+      console.log(`API Form Request: ${method} ${endpoint}`);
+      const response = await fetch(url, options);
+
+      // Check if the response is 401 Unauthorized
+      if (response.status === 401 && process.client) {
+        console.log("Received 401 unauthorized during form upload");
+        throw new Error("Authentication error during file upload");
+      }
+
+      // Check for other error responses
+      if (!response.ok) {
+        console.error(
+          "API Error response:",
+          response.status,
+          response.statusText
+        );
+        let errorData: any = {};
+
+        try {
+          const errorText = await response.text();
+          try {
+            errorData = JSON.parse(errorText);
+          } catch (e) {
+            errorData = { detail: errorText };
+          }
+          console.error("Error data:", errorData);
+        } catch (e) {
+          console.error("Failed to parse error response");
+        }
+
+        // Create a more meaningful error message
+        let errorMessage = `Error ${response.status}: ${response.statusText}`;
+
+        if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      // Parse response as JSON or return empty object if no content
+      if (response.status !== 204) {
+        const jsonResponse = await response.json();
+        return jsonResponse as T;
+      } else {
+        return {} as T;
+      }
+    } catch (error) {
+      console.error(`API Form Data Error:`, error);
+      throw error;
+    }
   }
   
   // Get lawyer documents
   async getLawyerDocuments(lawyerId: string) {
     return this.request<LawyerDocument[]>(`/lawyers/${lawyerId}/documents`, "GET");
-  }
-
-  // Get access token helper
-  private async getAccessToken(): Promise<string> {
-    if (process.client) {
-      const { getAccessToken, refreshToken } = useAuth();
-      let token = getAccessToken();
-      
-      // If token is not available, try to refresh
-      if (!token) {
-        await refreshToken();
-        token = getAccessToken();
-      }
-      
-      if (!token) {
-        throw new Error('No authentication token available');
-      }
-      
-      return token;
-    }
-    
-    return '';
   }
 
   // Education endpoints

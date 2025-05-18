@@ -481,11 +481,12 @@ const availablePracticeAreas = computed(() => {
   );
 });
 
-const canProceed = computed(() => {  
+const canProceed = computed(() => {
   if (currentStep.value === 1) {
     // Check required fields for step 1
     const result = !!formData.value.name && !!formData.value.title && 
            !!formData.value.email && !!formData.value.bio;
+    console.log("Step 1 validation result:", result);
     return result;
   } else if (currentStep.value === 2) {
     // Require at least one practice area
@@ -502,6 +503,7 @@ const canSubmitFinal = computed(() => {
 
 // Methods
 const goToNextStep = () => {
+  console.log("Current step:", currentStep.value);
   
   // Reset validation errors
   showValidationError.value = false;
@@ -541,7 +543,6 @@ const goToNextStep = () => {
   
   // Proceed to next step
   currentStep.value += 1;
-  console.log("Moving to step:", currentStep.value);
 };
 
 // Add a practice area
@@ -624,14 +625,17 @@ const submitForm = async () => {
       // Pass the user ID if available
       user_id: user.value?.id
     };
-        
-    // Create the lawyer profile using the LawyerService
-    const response = await lawyerService.createLawyer(lawyerData);
     
+    // Create the lawyer profile using the LawyerService
+    const response = await lawyerService.createLawyer(lawyerData);    
     // If lawyer creation was successful, upload documents
-    if (response && response.id) {
+    if (response && response.id) {      
       // Upload documents
-      await uploadLawyerDocuments(response.id);
+      const docsUploaded = await uploadLawyerDocuments(response.id);
+      
+      if (!docsUploaded) {
+        showError('Error', 'Tu perfil se creó pero hubo un problema al subir los documentos. Por favor, intenta subirlos más tarde desde tu perfil.');
+      }
       
       // Refresh user profile to get updated information including lawyer_id
       await fetchUserProfile();
@@ -641,10 +645,12 @@ const submitForm = async () => {
       
       // Redirect to dashboard
       navigateTo('/');
+    } else {
+      throw new Error("No se recibió ID de abogado en la respuesta");
     }
   } catch (err) {
-    showError('Error', err instanceof Error ? err.message : 'Error al crear el perfil');
     console.error('Error creating lawyer profile:', err);
+    showError('Error', err instanceof Error ? err.message : 'Error al crear el perfil');
   } finally {
     isSubmitting.value = false;
   }
@@ -652,19 +658,22 @@ const submitForm = async () => {
 
 // Upload lawyer documents to the server
 const uploadLawyerDocuments = async (lawyerId: string) => {
+  console.log("Starting document upload for lawyer ID:", lawyerId);
+  
   if (!formData.value.supremeCourtCertificate || !formData.value.universityDegree) {
     showError('Error', 'Faltan documentos requeridos');
     return false;
   }
   
   try {
-    // Create FormData object for file upload
+
+    // Create FormData object for Supreme Court Certificate
     const formDataSupremeCourt = new FormData();
     formDataSupremeCourt.append('supreme_court_certificate', formData.value.supremeCourtCertificate);
     formDataSupremeCourt.append('document_types', 'supreme_court_certificate');
     
     // Upload Supreme Court Certificate
-    await lawyerService.uploadLawyerDocument(lawyerId, formDataSupremeCourt);
+    const supremeCourtResult = await lawyerService.uploadLawyerDocument(lawyerId, formDataSupremeCourt);
     
     // Create FormData for University Degree
     const formDataUniversity = new FormData();
@@ -672,13 +681,13 @@ const uploadLawyerDocuments = async (lawyerId: string) => {
     formDataUniversity.append('document_types', 'university_degree');
     
     // Upload University Degree
-    await lawyerService.uploadLawyerDocument(lawyerId, formDataUniversity);
+    const universityResult = await lawyerService.uploadLawyerDocument(lawyerId, formDataUniversity);
     
     success('Documentos subidos', 'Sus documentos han sido cargados y serán verificados por nuestro equipo.');
     return true;
   } catch (err) {
     console.error('Error uploading documents:', err);
-    showError('Error', 'Hubo un problema al subir sus documentos. Por favor, inténtelo más tarde.');
+    showError('Error', err instanceof Error ? err.message : 'Hubo un problema al subir sus documentos. Por favor, inténtelo más tarde.');
     return false;
   }
 };
