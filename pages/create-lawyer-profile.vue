@@ -41,6 +41,16 @@
                   </div>
                   <div class="ml-2 text-sm font-medium text-gray-700">Experiencia</div>
                 </li>
+                <li class="flex items-center">
+                  <div class="w-6 h-px bg-gray-300"></div>
+                  <div :class="[
+                    currentStep >= 4 ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-600',
+                    'flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ml-4'
+                  ]">
+                    4
+                  </div>
+                  <div class="ml-2 text-sm font-medium text-gray-700">Documentos</div>
+                </li>
               </ol>
             </nav>
           </div>
@@ -64,6 +74,9 @@
                     class="form-input"
                     required
                   />
+                  <p v-if="formValidationErrors.name" class="text-xs text-red-500 mt-1">
+                    Este campo es obligatorio
+                  </p>
                 </div>
                 <div>
                   <label for="title" class="block text-sm font-medium text-gray-700 mb-1">
@@ -77,6 +90,9 @@
                     placeholder="Abogado Civil, Universidad de Chile"
                     required
                   />
+                  <p v-if="formValidationErrors.title" class="text-xs text-red-500 mt-1">
+                    Este campo es obligatorio
+                  </p>
                 </div>
                 <div>
                   <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
@@ -89,6 +105,9 @@
                     class="form-input"
                     required
                   />
+                  <p v-if="formValidationErrors.email" class="text-xs text-red-500 mt-1">
+                    Este campo es obligatorio
+                  </p>
                 </div>
                 <div>
                   <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
@@ -126,6 +145,20 @@
                   placeholder="Describa su experiencia, enfoque profesional y especialidades"
                   required
                 ></textarea>
+                <p v-if="formValidationErrors.bio" class="text-xs text-red-500 mt-1">
+                  Este campo es obligatorio
+                </p>
+              </div>
+              
+              <div v-if="showValidationError" class="bg-red-50 p-3 rounded-md">
+                <div class="flex">
+                  <div class="flex-shrink-0">
+                    <AlertCircle class="h-5 w-5 text-red-400" />
+                  </div>
+                  <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">Por favor complete todos los campos obligatorios</h3>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -286,6 +319,64 @@
             </div>
           </div>
           
+          <!-- Step 4: Document Upload -->
+          <div v-if="currentStep === 4">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Documentos Legales</h2>
+            <p class="text-sm text-gray-600 mb-6">
+              Para verificar su identidad y titulación, por favor suba los siguientes documentos:
+            </p>
+            
+            <div class="space-y-8">
+              <!-- Supreme Court Certificate -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Certificado de Título de la Corte Suprema *
+                </label>
+                <UiFileUpload
+                  v-model="formData.supremeCourtCertificate"
+                  label="Sube tu Certificado de Título de la Corte Suprema"
+                  acceptedFormats=".pdf,.jpg,.jpeg,.png"
+                  :maxSizeInMB="5"
+                />
+                <p class="mt-1 text-xs text-gray-500">
+                  Formato PDF, JPG o PNG. Máximo 5MB.
+                </p>
+              </div>
+              
+              <!-- University Degree -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Certificado de Título Universitario *
+                </label>
+                <UiFileUpload
+                  v-model="formData.universityDegree"
+                  label="Sube tu Certificado de Título Universitario"
+                  acceptedFormats=".pdf,.jpg,.jpeg,.png"
+                  :maxSizeInMB="5"
+                />
+                <p class="mt-1 text-xs text-gray-500">
+                  Formato PDF, JPG o PNG. Máximo 5MB.
+                </p>
+              </div>
+              
+              <div v-if="!formData.supremeCourtCertificate || !formData.universityDegree" class="bg-yellow-50 p-4 rounded-md">
+                <div class="flex">
+                  <div class="flex-shrink-0">
+                    <AlertCircle class="h-5 w-5 text-yellow-400" />
+                  </div>
+                  <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">Documentos requeridos</h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                      <p>
+                        Ambos documentos son necesarios para completar tu registro y verificar tu identidad profesional.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <!-- Form Navigation -->
           <div class="mt-8 flex justify-between">
             <button
@@ -300,10 +391,10 @@
             
             <div>
               <button
-                v-if="currentStep < 3"
+                v-if="currentStep < 4"
                 @click="goToNextStep"
                 type="button"
-                class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+                class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 :disabled="!canProceed"
               >
                 Siguiente
@@ -313,7 +404,7 @@
                 @click="submitForm"
                 type="button"
                 class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
-                :disabled="isSubmitting"
+                :disabled="isSubmitting || !canSubmitFinal"
               >
                 {{ isSubmitting ? 'Creando Perfil...' : 'Completar Registro' }}
               </button>
@@ -327,11 +418,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { Trash, X } from 'lucide-vue-next';
+import { Trash, X, AlertCircle } from 'lucide-vue-next';
 import { useAuth } from '~/composables/useAuth';
 import { usePracticeAreas } from '~/composables/usePracticeAreas';
 import { useLawyerService } from '~/services/lawyer-service';
 import { useNotifications } from '~/composables/useNotifications';
+import UiFileUpload from '~/components/ui/FileUpload.vue';
 
 definePageMeta({
   middleware: ['lawyer-auth'] // Only require basic authentication
@@ -348,6 +440,13 @@ const currentStep = ref(1);
 const isSubmitting = ref(false);
 const selectedAreaId = ref('');
 const newLanguage = ref('');
+const showValidationError = ref(false);
+const formValidationErrors = ref({
+  name: false,
+  title: false,
+  email: false,
+  bio: false
+});
 
 // Form data with defaults from user profile
 const formData = ref({
@@ -363,7 +462,10 @@ const formData = ref({
   coverImageUrl: '',
   professionalStartDate: '',
   languages: ['Español'],
-  areas: []
+  areas: [],
+  // New document fields
+  supremeCourtCertificate: null as File | null,
+  universityDegree: null as File | null
 });
 
 // For languages input (comma-separated)
@@ -379,11 +481,12 @@ const availablePracticeAreas = computed(() => {
   );
 });
 
-const canProceed = computed(() => {
+const canProceed = computed(() => {  
   if (currentStep.value === 1) {
     // Check required fields for step 1
-    return formData.value.name && formData.value.title && 
-           formData.value.email && formData.value.bio;
+    const result = !!formData.value.name && !!formData.value.title && 
+           !!formData.value.email && !!formData.value.bio;
+    return result;
   } else if (currentStep.value === 2) {
     // Require at least one practice area
     return formData.value.areas.length > 0;
@@ -392,11 +495,53 @@ const canProceed = computed(() => {
   return true;
 });
 
+// Can submit final step
+const canSubmitFinal = computed(() => {
+  return formData.value.supremeCourtCertificate && formData.value.universityDegree;
+});
+
 // Methods
 const goToNextStep = () => {
-  if (canProceed.value) {
-    currentStep.value++;
+  
+  // Reset validation errors
+  showValidationError.value = false;
+  Object.keys(formValidationErrors.value).forEach(key => {
+    formValidationErrors.value[key] = false;
+  });
+  
+  if (currentStep.value === 1) {
+    // Validate required fields for step 1
+    let hasError = false;
+    
+    if (!formData.value.name) {
+      formValidationErrors.value.name = true;
+      hasError = true;
+    }
+    
+    if (!formData.value.title) {
+      formValidationErrors.value.title = true;
+      hasError = true;
+    }
+    
+    if (!formData.value.email) {
+      formValidationErrors.value.email = true;
+      hasError = true;
+    }
+    
+    if (!formData.value.bio) {
+      formValidationErrors.value.bio = true;
+      hasError = true;
+    }
+    
+    if (hasError) {
+      showValidationError.value = true;
+      return;
+    }
   }
+  
+  // Proceed to next step
+  currentStep.value += 1;
+  console.log("Moving to step:", currentStep.value);
 };
 
 // Add a practice area
@@ -479,23 +624,24 @@ const submitForm = async () => {
       // Pass the user ID if available
       user_id: user.value?.id
     };
-    
-    console.log("Sending data to API:", lawyerData);
-    
+        
     // Create the lawyer profile using the LawyerService
     const response = await lawyerService.createLawyer(lawyerData);
     
-    // Update the user's lawyer_id in the auth state
+    // If lawyer creation was successful, upload documents
     if (response && response.id) {
+      // Upload documents
+      await uploadLawyerDocuments(response.id);
+      
       // Refresh user profile to get updated information including lawyer_id
       await fetchUserProfile();
+      
+      // Show success message
+      success('Perfil creado', 'Su perfil de abogado ha sido creado correctamente y está en proceso de verificación');
+      
+      // Redirect to dashboard
+      navigateTo('/');
     }
-    
-    // Show success message
-    success('Perfil creado', 'Su perfil de abogado ha sido creado correctamente');
-    
-    // Redirect to dashboard
-    navigateTo('/');
   } catch (err) {
     showError('Error', err instanceof Error ? err.message : 'Error al crear el perfil');
     console.error('Error creating lawyer profile:', err);
@@ -504,14 +650,45 @@ const submitForm = async () => {
   }
 };
 
+// Upload lawyer documents to the server
+const uploadLawyerDocuments = async (lawyerId: string) => {
+  if (!formData.value.supremeCourtCertificate || !formData.value.universityDegree) {
+    showError('Error', 'Faltan documentos requeridos');
+    return false;
+  }
+  
+  try {
+    // Create FormData object for file upload
+    const formDataSupremeCourt = new FormData();
+    formDataSupremeCourt.append('supreme_court_certificate', formData.value.supremeCourtCertificate);
+    formDataSupremeCourt.append('document_types', 'supreme_court_certificate');
+    
+    // Upload Supreme Court Certificate
+    await lawyerService.uploadLawyerDocument(lawyerId, formDataSupremeCourt);
+    
+    // Create FormData for University Degree
+    const formDataUniversity = new FormData();
+    formDataUniversity.append('university_degree', formData.value.universityDegree);
+    formDataUniversity.append('document_types', 'university_degree');
+    
+    // Upload University Degree
+    await lawyerService.uploadLawyerDocument(lawyerId, formDataUniversity);
+    
+    success('Documentos subidos', 'Sus documentos han sido cargados y serán verificados por nuestro equipo.');
+    return true;
+  } catch (err) {
+    console.error('Error uploading documents:', err);
+    showError('Error', 'Hubo un problema al subir sus documentos. Por favor, inténtelo más tarde.');
+    return false;
+  }
+};
+
 // Load data on mount
 onMounted(async () => {
   try {
     // Fetch practice areas from the API
     await fetchPracticeAreas();
-    console.log("Fetched practice areas:", practiceAreas.value);
   } catch (error) {
-    console.error("Error fetching practice areas:", error);
     showError('Error', 'No se pudieron cargar las áreas de práctica');
   }
 });

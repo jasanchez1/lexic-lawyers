@@ -1,5 +1,5 @@
 import { ApiService } from "./api";
-import type { Lawyer, Education, WorkExperience, Achievement } from "~/types/lawyer";
+import type { Lawyer, Education, WorkExperience, Achievement, LawyerDocument } from "~/types/lawyer";
 
 export class LawyerService extends ApiService {
   async getLawyerProfile(lawyerId: string) {
@@ -17,6 +17,55 @@ export class LawyerService extends ApiService {
   // Create a new lawyer profile
   async createLawyer(data: any) {
     return this.request<Lawyer>('/lawyers', 'POST', data);
+  }
+
+  // Upload lawyer documents
+  async uploadLawyerDocument(lawyerId: string, documentData: FormData) {
+    const token = await this.getAccessToken();
+    const config = useRuntimeConfig();
+    const BASE_URL = config.public.apiBaseUrl || 'http://localhost:8000';
+    
+    const response = await fetch(`${BASE_URL}/api/lawyers/${lawyerId}/documents`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: documentData
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `Error ${response.status}: ${response.statusText}`);
+    }
+    
+    return response.json();
+  }
+  
+  // Get lawyer documents
+  async getLawyerDocuments(lawyerId: string) {
+    return this.request<LawyerDocument[]>(`/lawyers/${lawyerId}/documents`, "GET");
+  }
+
+  // Get access token helper
+  private async getAccessToken(): Promise<string> {
+    if (process.client) {
+      const { getAccessToken, refreshToken } = useAuth();
+      let token = getAccessToken();
+      
+      // If token is not available, try to refresh
+      if (!token) {
+        await refreshToken();
+        token = getAccessToken();
+      }
+      
+      if (!token) {
+        throw new Error('No authentication token available');
+      }
+      
+      return token;
+    }
+    
+    return '';
   }
 
   // Education endpoints
