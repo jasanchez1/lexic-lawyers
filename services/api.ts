@@ -116,6 +116,110 @@ export class ApiService {
     }
   }
 
+  /**
+   * Method specifically for handling FormData requests
+   * Similar to request() but doesn't set Content-Type (browser sets it with boundary)
+   */
+  protected async requestFormData<T>(
+    endpoint: string,
+    method: string = "POST",
+    formData: FormData,
+    headers: Record<string, string> = {}
+  ): Promise<T> {
+    // Get base URL from runtime config
+    const config = useRuntimeConfig();
+    const BASE_URL = config.public.apiBaseUrl || "http://localhost:8000";
+
+    const defaultHeaders: Record<string, string> = {
+      ...headers,
+    };
+
+    // Only add authorization header in client-side
+    if (process.client) {
+      const token = getAccessToken();
+      if (token) {
+        defaultHeaders["Authorization"] = `Bearer ${token}`;
+      }
+    }
+
+    const url = `${BASE_URL}${endpoint}`;
+    const options: RequestInit = {
+      method,
+      headers: defaultHeaders,
+      credentials: "include", // Include cookies in request
+      body: formData,
+    };
+
+    try {
+      console.log(`API FormData Request: ${method} ${endpoint}`);
+      const response = await fetch(url, options);
+
+      // Check if the response is 401 Unauthorized
+      if (response.status === 401 && process.client) {
+        console.log("Received 401 unauthorized during form upload, attempting token refresh");
+        // Try to refresh the token
+        const refreshed = await this.refreshToken();
+
+        if (refreshed) {
+          console.log("Token refreshed, retrying FormData request");
+          // Retry the request with the new token
+          return this.requestFormData(endpoint, method, formData, headers);
+        } else {
+          console.log("Token refresh failed, redirecting to login");
+          // Redirect to login
+          window.location.href = "/login";
+          throw new Error("Sesión expirada");
+        }
+      }
+
+      // Check for other error responses
+      if (!response.ok) {
+        console.error(
+          "API Error response:",
+          response.status,
+          response.statusText
+        );
+        let errorData: any = {};
+
+        try {
+          const errorText = await response.text();
+          try {
+            errorData = JSON.parse(errorText);
+          } catch (e) {
+            errorData = { detail: errorText };
+          }
+          console.error("Error data:", errorData);
+        } catch (e) {
+          console.error("Failed to parse error response");
+        }
+
+        // Create a more meaningful error message
+        let errorMessage = `Error ${response.status}: ${response.statusText}`;
+
+        if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      // Parse response as JSON or return empty object if no content
+      if (response.status !== 204) {
+        const jsonResponse = await response.json();
+        return jsonResponse as T;
+      } else {
+        return {} as T;
+      }
+    } catch (error) {
+      console.error(`API FormData Error: ${endpoint}`, error);
+      throw error;
+    }
+  }
+
   private async refreshToken(): Promise<boolean> {
     if (!process.client) return false;
 
