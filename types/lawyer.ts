@@ -43,6 +43,23 @@ export interface LawyerDocument {
   verified_date?: string;
 }
 
+export interface LawyerDocumentsResponse {
+  success: boolean;
+  data: {
+    lawyer_id: string;
+    documents: Array<{
+      type: string;
+      status: "pending_review" | "verified" | "rejected";
+      filename: string;
+      upload_date: string;
+      review_date: string | null;
+      url: string;
+      rejection_reason: string | null;
+    }>;
+  };
+  message: string | null;
+}
+
 export interface Lawyer {
   id: string;
   name: string;

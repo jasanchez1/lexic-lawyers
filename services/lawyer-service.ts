@@ -4,7 +4,7 @@ import type {
   Education,
   WorkExperience,
   Achievement,
-  LawyerDocument,
+  LawyerDocumentsResponse,
 } from "~/types/lawyer";
 
 export class LawyerService extends ApiService {
@@ -25,20 +25,20 @@ export class LawyerService extends ApiService {
     return this.request<Lawyer>("/lawyers", "POST", data);
   }
 
-  // Upload lawyer documents
-  async uploadLawyerDocument(lawyerId: string, documentData: FormData) {
-    return this.requestFormData<any>(
+  // Get lawyer documents
+  async getLawyerDocuments(lawyerId: string) {
+    return this.request<LawyerDocumentsResponse>(
       `/lawyers/${lawyerId}/documents`,
-      "POST",
-      documentData
+      "GET"
     );
   }
 
-  // Get lawyer documents
-  async getLawyerDocuments(lawyerId: string) {
-    return this.request<LawyerDocument[]>(
+  // Upload lawyer documents
+  async uploadLawyerDocument(lawyerId: string, formData: FormData) {
+    return this.requestFormData<any>(
       `/lawyers/${lawyerId}/documents`,
-      "GET"
+      "POST",
+      formData
     );
   }
 

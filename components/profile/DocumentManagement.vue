@@ -20,19 +20,19 @@
               <div v-if="supremeCourtCertificate" class="mt-2">
                 <div class="flex items-center text-sm text-gray-600">
                   <FileCheck class="w-4 h-4 mr-1 text-green-500" />
-                  <span>Documento subido el {{ formatDate(supremeCourtCertificate.uploaded_date) }}</span>
+                  <span>Documento subido el {{ formatDate(supremeCourtCertificate.upload_date) }}</span>
                 </div>
                 <div v-if="supremeCourtCertificate.status === 'verified'" class="flex items-center mt-1 text-sm text-green-600">
                   <CheckCircle class="w-4 h-4 mr-1" />
                   <span>Verificado</span>
                 </div>
-                <div v-else-if="supremeCourtCertificate.status === 'pending'" class="flex items-center mt-1 text-sm text-yellow-600">
+                <div v-else-if="supremeCourtCertificate.status === 'pending_review'" class="flex items-center mt-1 text-sm text-yellow-600">
                   <Clock class="w-4 h-4 mr-1" />
                   <span>Pendiente de verificación</span>
                 </div>
                 <div v-else-if="supremeCourtCertificate.status === 'rejected'" class="flex items-center mt-1 text-sm text-red-600">
                   <AlertCircle class="w-4 h-4 mr-1" />
-                  <span>Documento rechazado: {{ supremeCourtCertificate.notes || 'Por favor, suba un nuevo documento' }}</span>
+                  <span>Documento rechazado: {{ supremeCourtCertificate.rejection_reason || 'Por favor, suba un nuevo documento' }}</span>
                 </div>
               </div>
               <div v-else class="mt-2 text-sm text-yellow-600 flex items-center">
@@ -44,7 +44,7 @@
             <div class="flex gap-2">
               <button 
                 v-if="supremeCourtCertificate"
-                @click="downloadDocument(supremeCourtCertificate.id, 'Certificado_Corte_Suprema')"
+                @click="downloadDocument('supreme_court_certificate')"
                 class="text-primary-600 hover:text-primary-700 text-sm flex items-center"
               >
                 <Download class="w-4 h-4 mr-1" />
@@ -96,19 +96,19 @@
               <div v-if="universityDegree" class="mt-2">
                 <div class="flex items-center text-sm text-gray-600">
                   <FileCheck class="w-4 h-4 mr-1 text-green-500" />
-                  <span>Documento subido el {{ formatDate(universityDegree.uploaded_date) }}</span>
+                  <span>Documento subido el {{ formatDate(universityDegree.upload_date) }}</span>
                 </div>
                 <div v-if="universityDegree.status === 'verified'" class="flex items-center mt-1 text-sm text-green-600">
                   <CheckCircle class="w-4 h-4 mr-1" />
                   <span>Verificado</span>
                 </div>
-                <div v-else-if="universityDegree.status === 'pending'" class="flex items-center mt-1 text-sm text-yellow-600">
+                <div v-else-if="universityDegree.status === 'pending_review'" class="flex items-center mt-1 text-sm text-yellow-600">
                   <Clock class="w-4 h-4 mr-1" />
                   <span>Pendiente de verificación</span>
                 </div>
                 <div v-else-if="universityDegree.status === 'rejected'" class="flex items-center mt-1 text-sm text-red-600">
                   <AlertCircle class="w-4 h-4 mr-1" />
-                  <span>Documento rechazado: {{ universityDegree.notes || 'Por favor, suba un nuevo documento' }}</span>
+                  <span>Documento rechazado: {{ universityDegree.rejection_reason || 'Por favor, suba un nuevo documento' }}</span>
                 </div>
               </div>
               <div v-else class="mt-2 text-sm text-yellow-600 flex items-center">
@@ -120,7 +120,7 @@
             <div class="flex gap-2">
               <button 
                 v-if="universityDegree"
-                @click="downloadDocument(universityDegree.id, 'Titulo_Universitario')"
+                @click="downloadDocument('university_degree')"
                 class="text-primary-600 hover:text-primary-700 text-sm flex items-center"
               >
                 <Download class="w-4 h-4 mr-1" />
@@ -204,6 +204,7 @@
   
   // Services
   const lawyerService = useLawyerService();
+  const { getAccessToken } = useAuth();
   const { success, error: showError } = useNotifications();
   
   // State
@@ -214,11 +215,11 @@
   
   // Derived document state
   const supremeCourtCertificate = computed(() => {
-    return documents.value.find(doc => doc.document_type === 'supreme_court_certificate');
+    return documents.value.find(doc => doc.type === 'supreme_court_certificate');
   });
   
   const universityDegree = computed(() => {
-    return documents.value.find(doc => doc.document_type === 'university_degree');
+    return documents.value.find(doc => doc.type === 'university_degree');
   });
   
   // Upload state
@@ -239,7 +240,12 @@
     
     try {
       const response = await lawyerService.getLawyerDocuments(props.lawyerId);
-      documents.value = response || [];
+      
+      if (!response || !response.success) {
+        throw new Error('Failed to fetch documents');
+      }
+      
+      documents.value = response.data.documents || [];
     } catch (err) {
       console.error('Error fetching documents:', err);
       error.value = err instanceof Error ? err.message : 'Error al cargar documentos';
@@ -301,70 +307,80 @@
     }
   };
   
-  const downloadDocument = async (documentId: string, fileName: string) => {
-    try {
-      // Get authentication token
-      const { getAccessToken } = useAuth();
-      const token = getAccessToken();
-      
-      if (!token) {
-        showError('Error', 'No se pudo autenticar para descargar el documento');
-        return;
-      }
-      
-      // Get config for base URL
-      const config = useRuntimeConfig();
-      const BASE_URL = config.public.apiBaseUrl || 'http://localhost:8000';
-      
-      // Create download URL
-      const url = `${BASE_URL}/api/lawyers/${props.lawyerId}/documents/${documentId}/download`;
-      
-      // Use fetch with proper headers to get the document
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-      
-      // Get the blob from response
-      const blob = await response.blob();
-      
-      // Get the content type
-      const contentType = response.headers.get('content-type') || '';
-      let extension = '.pdf';
-      
-      // Determine file extension from content type
-      if (contentType.includes('jpeg') || contentType.includes('jpg')) {
-        extension = '.jpg';
-      } else if (contentType.includes('png')) {
-        extension = '.png';
-      }
-      
-      // Create object URL
-      const objectURL = URL.createObjectURL(blob);
-      
-      // Create link element
-      const link = document.createElement('a');
-      link.href = objectURL;
-      link.download = `${fileName}${extension}`;
-      
-      // Trigger download
-      document.body.appendChild(link);
-      link.click();
-      
-      // Clean up
-      document.body.removeChild(link);
-      URL.revokeObjectURL(objectURL);
-    } catch (err) {
-      console.error('Error downloading document:', err);
-      showError('Error', err instanceof Error ? err.message : 'Error al descargar documento');
+  const downloadDocument = async (documentType: string) => {
+  try {
+    // Get authentication token
+    const token = getAccessToken();
+    
+    if (!token) {
+      showError('Error', 'No se pudo autenticar para descargar el documento');
+      return;
     }
-  };
+    
+    // Get config for base URL
+    const config = useRuntimeConfig();
+    const BASE_URL = config.public.apiBaseUrl || 'http://localhost:8000';
+    
+    // Create download URL
+    const url = `${BASE_URL}/lawyers/${props.lawyerId}/documents/${documentType}`;
+    
+    console.log(`Attempting to download document from URL: ${url}`);
+    
+    // Use fetch with proper headers to get the document - same for both document types
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+    
+    // Get the blob from response
+    const blob = await response.blob();
+    
+    // Use a safe filename based on document type
+    let filename;
+    if (documentType === 'supreme_court_certificate') {
+      filename = 'Certificado_Corte_Suprema.pdf';
+    } else if (documentType === 'university_degree') {
+      filename = 'Titulo_Universitario.pdf';
+    } else {
+      filename = 'Documento_Legal.pdf';
+    }
+    
+    // Adjust filename extension based on content type
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('jpeg') || contentType.includes('jpg')) {
+      filename = filename.replace('.pdf', '.jpg');
+    } else if (contentType.includes('png')) {
+      filename = filename.replace('.pdf', '.png');
+    }
+    
+    // Create a download link using the blob data - this bypasses header issues
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename; // Set a safe filename without special characters
+    
+    // Append to body, click, and remove
+    document.body.appendChild(a);
+    a.click();
+    
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    }, 100);
+    
+    success('Documento descargado correctamente');
+  } catch (err) {
+    console.error('Error downloading document:', err);
+    showError('Error', err instanceof Error ? err.message : 'Error al descargar documento');
+  }
+};
   
   // Format date
   const formatDate = (dateString: string) => {

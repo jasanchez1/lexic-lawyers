@@ -2,7 +2,7 @@ import { ref, readonly } from 'vue'
 import { useAuthService } from '~/services/auth-service'
 import { useLawyerService } from '~/services/lawyer-service'
 import { 
-  getAccessToken, 
+  getAccessToken as getCookieAccessToken, 
   getRefreshToken, 
   storeTokens,
   clearTokens
@@ -218,6 +218,11 @@ export function useAuth() {
     }
   }
 
+  // Added method to get the access token
+  const getAccessToken = () => {
+    return getCookieAccessToken();
+  }
+
   return {
     user: readonly(user),
     isAuthenticated: readonly(isAuthenticated),
@@ -228,6 +233,7 @@ export function useAuth() {
     logout,
     fetchUserProfile,
     initAuth,
-    refreshToken
+    refreshToken,
+    getAccessToken
   }
 }
