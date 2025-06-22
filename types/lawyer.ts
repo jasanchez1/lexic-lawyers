@@ -69,6 +69,7 @@ export interface Lawyer {
   phone?: string;
   city?: string;
   imageURL?: string;
+  image_url?: string;
   coverImageUrl?: string;
   languages?: string[];
   professionalStartDate?: string;
@@ -78,4 +79,7 @@ export interface Lawyer {
   achievements?: Achievement[];
   reviewScore: number;
   reviewCount: number;
+  is_verified: boolean;
+  review_score?: number;
+  review_count?: number;
 }
