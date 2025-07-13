@@ -80,12 +80,15 @@
                 <div class="flex-1">
                   <div class="flex justify-between mb-1">
                     <span class="text-gray-700 font-medium">{{ area.name }}</span>
-                    <span class="text-gray-500">{{ area.experience_score }}%</span>
+                    <span class="text-sm text-gray-600">{{ getExperienceLevelName(area.experience_score) }}</span>
                   </div>
                   <div class="w-full bg-gray-100 rounded-full h-2">
                     <div class="bg-primary-500 h-2 rounded-full transition-all duration-500"
                       :style="{ width: `${area.experience_score}%` }"></div>
                   </div>
+                  <p class="text-xs text-gray-500 mt-1">
+                    {{ getExperienceLevelDescription(area.experience_score) }}
+                  </p>
                 </div>
               </div>
             </div>
@@ -205,9 +208,13 @@
                 </div>
                 <div>
                   <label for="title" class="block text-sm font-medium text-gray-700 mb-1">
-                    Título Profesional
+                    Título Profesional Público
                   </label>
-                  <input id="title" v-model="editForm.title" type="text" class="form-input" />
+                  <input id="title" v-model="editForm.title" type="text" class="form-input"
+                    placeholder="Ej: Abogado Civil, Abogada de Familia y Sucesiones" />
+                  <p class="mt-1 text-xs text-gray-500">
+                    Este título aparecerá en tu perfil público y ayudará a los clientes a entender tu especialización.
+                  </p>
                 </div>
                 <div>
                   <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
@@ -225,7 +232,7 @@
                   <label for="city" class="block text-sm font-medium text-gray-700 mb-1">
                     Ciudad
                   </label>
-                  <input id="city" v-model="editForm.city" type="text" class="form-input" />
+                  <UiCitySelect id="city" v-model="editForm.city" placeholder="Selecciona tu ciudad" />
                 </div>
                 <div>
                   <label for="languages" class="block text-sm font-medium text-gray-700 mb-1">
@@ -273,18 +280,32 @@
                 Ajusta el nivel de experiencia para cada área o elimina áreas que ya no practicas.
               </p>
 
-              <div class="space-y-4">
-                <div v-for="(area, index) in editForm.areas" :key="index" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <div class="flex justify-between mb-1">
-                      <span class="text-gray-700 font-medium">{{ area.name }}</span>
-                      <span class="text-gray-500">{{ area.experience_score }}%</span>
+              <div class="bg-white rounded-lg shadow-sm border p-6">
+                <h3 class="text-lg font-bold mb-4">Áreas de Práctica</h3>
+                <div v-if="profile.areas && profile.areas.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div v-for="area in profile.areas" :key="area.id"
+                    class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="flex items-center justify-between mb-3">
+                      <h4 class="font-medium text-gray-900">{{ area.name }}</h4>
+                      <span
+                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                        {{ getExperienceLevelName(area.experience_score) }}
+                      </span>
                     </div>
-                    <input v-model.number="area.experience_score" type="range" min="1" max="100" class="w-full" />
+
+                    <!-- Progress bar -->
+                    <div class="w-full bg-gray-200 rounded-full h-1.5 mb-2">
+                      <div class="bg-primary-500 h-1.5 rounded-full transition-all duration-500"
+                        :style="{ width: `${area.experience_score}%` }"></div>
+                    </div>
+
+                    <p class="text-xs text-gray-600">
+                      {{ getExperienceLevelDescription(area.experience_score) }}
+                    </p>
                   </div>
-                  <button type="button" @click="removeArea(index)" class="text-red-500 hover:text-red-700">
-                    <Trash2 class="w-5 h-5" />
-                  </button>
+                </div>
+                <div v-else class="text-gray-500 text-center py-8">
+                  <p>No hay áreas de práctica configuradas</p>
                 </div>
               </div>
 
@@ -333,6 +354,7 @@ import { useNotifications } from '~/composables/useNotifications'
 import { usePracticeAreas } from '~/composables/usePracticeAreas'
 import { useAuth } from '~/composables/useAuth'
 import ProfileDocumentManagement from '~/components/profile/DocumentManagement.vue'
+import { useExperienceLevels } from '~/composables/useExperienceLevels'
 
 definePageMeta({
   middleware: ['lawyer-auth']
@@ -345,6 +367,32 @@ const { user } = useAuth()
 const { profile, education, workExperience, achievements, isLoading, error, fetchProfile, updateProfile, fetchExperience } = useProfile()
 const { success, error: showError } = useNotifications()
 const { practiceAreas } = usePracticeAreas()
+const { experienceLevels, getExperienceLevelName, getExperienceLevelDescription, mapToNearestLevel } = useExperienceLevels()
+
+// Update the watch function that initializes editForm
+watch(profile, newProfile => {
+  if (newProfile) {
+    editForm.value = {
+      name: newProfile.name || '',
+      title: newProfile.title || '',
+      email: newProfile.email || '',
+      phone: newProfile.phone || '',
+      city: newProfile.city || '',
+      bio: newProfile.bio || '',
+      imageUrl: newProfile.image_url || '',
+      coverImageUrl: newProfile.coverImageUrl || '',
+      languages: [...(newProfile.languages || [])],
+      areas: [...(newProfile.areas || []).map(area => ({
+        ...area,
+        // Map existing scores to nearest valid level for editing
+        experience_score: mapToNearestLevel(area.experience_score)
+      }))]
+    }
+
+    // Update languages input
+    languagesInput.value = (newProfile.languages || []).join(', ')
+  }
+})
 
 // Edit form model
 const editForm = ref({
