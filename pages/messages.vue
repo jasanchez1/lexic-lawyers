@@ -118,7 +118,7 @@
                 <div 
                   class="max-w-[75%] rounded-lg p-3 mb-1"
                   :class="[
-                    message.fromLawyer ? 
+                    isMessageFromCurrentUser(message) ? 
                       'bg-primary-100 text-primary-800 self-end' : 
                       'bg-white border border-gray-200 self-start'
                   ]"
@@ -129,7 +129,7 @@
                 <!-- Timestamp -->
                 <div 
                   class="text-xs text-gray-500 mb-2"
-                  :class="[message.fromLawyer ? 'self-end' : 'self-start']"
+                  :class="[isMessageFromCurrentUser(message) ? 'self-end' : 'self-start']"
                 >
                   {{ formatMessageTime(message.timestamp) }}
                 </div>
@@ -172,6 +172,8 @@ import { ref, nextTick, onMounted, watch } from 'vue'
 import { MessageCircle } from 'lucide-vue-next'
 import { useMessaging } from '~/composables/useMessaging'
 import { useNotifications } from '~/composables/useNotifications'
+import { useAuth } from '~/composables/useAuth'
+import { isMessageFromUser } from '~/types/message'
 
 definePageMeta({
   middleware: ['lawyer-auth']
@@ -191,6 +193,7 @@ const {
 } = useMessaging()
 
 const { success, error: showError } = useNotifications()
+const { user } = useAuth()
 
 const selectedConversation = ref(null)
 const newMessage = ref('')
@@ -245,20 +248,33 @@ const scrollToBottom = () => {
   }
 }
 
+// Check if message is from current user (lawyer)
+const isMessageFromCurrentUser = (message: any) => {
+  if (!user.value) return false
+  
+  // Use new user ID logic if available
+  if (message.user_id_from) {
+    return message.user_id_from === user.value.id
+  }
+  
+  // Fallback to old from_lawyer logic for backward compatibility
+  return message.from_lawyer
+}
+
 // Get initials from a name
-const getInitials = (name) => {
+const getInitials = (name: string) => {
   if (!name) return '?'
   
   return name
     .split(' ')
     .map(n => n[0])
     .join('')
-    .substr(0, 2)
+    .substring(0, 2)
     .toUpperCase()
 }
 
 // Format date for display
-const formatDate = (dateString) => {
+const formatDate = (dateString: string) => {
   if (!dateString) return ''
   
   const date = new Date(dateString)
@@ -278,7 +294,7 @@ const formatDate = (dateString) => {
 }
 
 // Format message date for display
-const formatMessageDate = (timestamp) => {
+const formatMessageDate = (timestamp: string) => {
   if (!timestamp) return 'Fecha desconocida'
   
   const date = new Date(timestamp)
@@ -300,7 +316,7 @@ const formatMessageDate = (timestamp) => {
 }
 
 // Format message time for display
-const formatMessageTime = (timestamp) => {
+const formatMessageTime = (timestamp: string) => {
   if (!timestamp) return ''
   
   const date = new Date(timestamp)
@@ -308,7 +324,7 @@ const formatMessageTime = (timestamp) => {
 }
 
 // Determine if we should show a date separator
-const shouldShowDateSeparator = (currentMessage, previousMessage) => {
+const shouldShowDateSeparator = (currentMessage: any, previousMessage: any) => {
   if (!previousMessage || !currentMessage) return true
   
   const currentDate = new Date(currentMessage.timestamp).toDateString()

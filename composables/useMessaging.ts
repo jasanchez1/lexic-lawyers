@@ -1,14 +1,17 @@
 import { ref } from "vue";
 import { useMessagingService } from "~/services/messaging-service";
+import type { Message, Conversation } from "~/types/message";
+import { useAuth } from "~/composables/useAuth";
 
 export function useMessaging() {
   const messagingService = useMessagingService();
+  const { user } = useAuth();
 
-  const conversations = ref([]);
-  const currentMessages = ref([]);
+  const conversations = ref<Conversation[]>([]);
+  const currentMessages = ref<Message[]>([]);
   const isLoading = ref(false);
   const isLoadingMessages = ref(false);
-  const error = ref(null);
+  const error = ref<string | null>(null);
 
   // Fetch all conversations
   const fetchConversations = async () => {
@@ -19,22 +22,22 @@ export function useMessaging() {
       const response = await messagingService.getConversations();
 
       // Transform the API response to match expected structure
-      conversations.value = (response || []).map((conversation) => ({
+      // Note: API returns "lawyer" field which is actually the client from lawyer's perspective
+      conversations.value = (response || []).map((conversation: any): Conversation => ({
         id: conversation.id,
-        // If we got lawyer info but need client info for the UI
-        client: conversation.lawyer || {
-          id: conversation.client?.id || "",
-          name:
-            conversation.client?.name || conversation.lawyer?.name || "Unknown",
-          email: conversation.client?.email || "",
-          imageUrl:
-            conversation.client?.image_url ||
-            conversation.lawyer?.image_url ||
-            null,
+        client: {
+          id: conversation.lawyer?.id || conversation.lawyer?.user_id || "",
+          name: conversation.lawyer?.name || "Unknown",
+          email: conversation.lawyer?.email || "",
+          imageUrl: conversation.lawyer?.image_url || undefined,
+        },
+        lawyer: {
+          user_id: conversation.lawyer?.user_id || "",
+          name: conversation.lawyer?.name || "Unknown", 
+          email: conversation.lawyer?.email || "",
         },
         lastMessage: conversation.last_message || "",
-        lastMessageDate:
-          conversation.last_message_date || new Date().toISOString(),
+        lastMessageDate: conversation.last_message_date || new Date().toISOString(),
         unreadCount: conversation.unread_count || 0,
       }));
 
@@ -57,14 +60,17 @@ export function useMessaging() {
       const response = await messagingService.getMessages(conversationId);
 
       // Transform the API response to match expected structure
-      currentMessages.value = (response || []).map((message) => ({
+      currentMessages.value = (response || []).map((message: any): Message => ({
         id: message.id,
+        conversation_id: message.conversation_id || conversationId,
         content: message.content || "",
-        fromLawyer: message.from_lawyer || false,
+        user_id_from: message.user_id_from || "",
+        user_id_to: message.user_id_to || "",
+        from_lawyer: message.from_lawyer ?? false, // Keep for backward compatibility
         read: message.read || false,
-        timestamp:
-          message.timestamp || message.date || new Date().toISOString(),
-        conversationId: message.conversation_id || conversationId,
+        timestamp: message.timestamp || new Date().toISOString(),
+        created_at: message.created_at || new Date().toISOString(),
+        updated_at: message.updated_at || new Date().toISOString(),
       }));
 
       return currentMessages.value;
@@ -83,17 +89,21 @@ export function useMessaging() {
     try {
       const response = await messagingService.sendMessage(conversationId, {
         content,
+        user_id: user.value?.id || "",
       });
 
       // Transform the API response to match expected structure
-      const newMessage = {
-        id: response.id || `temp-${Date.now()}`,
+      const newMessage: Message = {
+        id: (response as any).id || `temp-${Date.now()}`,
+        conversation_id: conversationId,
         content: content,
-        fromLawyer: true,
+        user_id_from: user.value?.id || "",
+        user_id_to: (response as any).user_id_to || "",
+        from_lawyer: true, // Current user (lawyer) is sending this message
         read: false,
-        timestamp:
-          response.timestamp || response.date || new Date().toISOString(),
-        conversationId: conversationId,
+        timestamp: (response as any).timestamp || new Date().toISOString(),
+        created_at: (response as any).created_at || new Date().toISOString(),
+        updated_at: (response as any).updated_at || new Date().toISOString(),
       };
 
       // Add the new message to the current messages

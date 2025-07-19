@@ -1,18 +1,19 @@
 import { ApiService } from './api';
 import type { User } from '~/types/user';
+import type { Message, Conversation, MessageSendRequest } from '~/types/message';
 import { useAuth } from '~/composables/useAuth';
 
 export class MessagingService extends ApiService {
   async getConversations() {
-    return this.request<any[]>('/conversations', 'GET');
+    return this.request<Conversation[]>('/conversations', 'GET');
   }
   
   async getMessages(conversationId: string) {
-    return this.request<any[]>(`/conversations/${conversationId}/messages`, 'GET');
+    return this.request<Message[]>(`/conversations/${conversationId}/messages`, 'GET');
   }
   
-  async sendMessage(conversationId: string, data: { content: string }) {
-    return this.request<any>(`/conversations/${conversationId}/messages`, 'POST', data);
+  async sendMessage(conversationId: string, data: MessageSendRequest) {
+    return this.request<Message>(`/conversations/${conversationId}/messages`, 'POST', data);
   }
   
   async markAsRead(conversationId: string) {
@@ -21,7 +22,7 @@ export class MessagingService extends ApiService {
   
   // API endpoint for sending an initial message to a lawyer
   async sendInitialMessage(lawyerId: string, data: { content: string, name: string, email: string }) {
-    return this.request<any>(`/conversations/lawyers/${lawyerId}/messages`, 'POST', data);
+    return this.request<Message>(`/conversations/lawyers/${lawyerId}/messages`, 'POST', data);
   }
 }
 
