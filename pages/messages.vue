@@ -32,27 +32,24 @@
             @click="selectConversation(conversation)"
           >
             <div class="flex items-center">
-              <div v-if="conversation.client?.imageUrl" class="mr-3">
+              <div v-if="conversation.other_participant?.image_url" class="mr-3">
                 <img
-                  :src="conversation.client.imageUrl"
-                  :alt="conversation.client.name"
+                  :src="conversation.other_participant.image_url"
+                  :alt="conversation.other_participant.name"
                   class="h-10 w-10 rounded-full object-cover"
                 />
               </div>
               <div v-else class="h-10 w-10 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center mr-3">
-                {{ getInitials(conversation.client?.name || 'Usuario') }}
+                {{ getInitials(conversation.other_participant?.name || 'Usuario') }}
               </div>
               
               <div class="flex-1 min-w-0">
                 <div class="flex justify-between items-baseline">
-                  <p class="font-medium truncate">{{ conversation.client?.name || 'Usuario' }}</p>
-                  <span class="text-xs text-gray-500">{{ formatDate(conversation.lastMessageDate || new Date().toISOString()) }}</span>
+                  <p class="font-medium truncate">{{ conversation.other_participant?.name || 'Usuario' }}</p>
+                  <span class="text-xs text-gray-500">{{ formatDate(conversation.last_message_date || new Date().toISOString()) }}</span>
                 </div>
                 <p class="text-sm text-gray-500 truncate">
-                  <span v-if="conversation.unreadCount" class="inline-block bg-primary-600 text-white text-xs rounded-full px-1.5 mr-1">
-                    {{ conversation.unreadCount }}
-                  </span>
-                  {{ conversation.lastMessage || 'No hay mensajes' }}
+                  {{ conversation.last_message || 'No hay mensajes' }}
                 </p>
               </div>
             </div>
@@ -74,20 +71,20 @@
           <!-- Conversation Header -->
           <div class="p-4 border-b flex items-center justify-between">
             <div class="flex items-center">
-              <div v-if="selectedConversation.client?.imageUrl" class="mr-3">
+              <div v-if="selectedConversation.other_participant?.image_url" class="mr-3">
                 <img
-                  :src="selectedConversation.client.imageUrl"
-                  :alt="selectedConversation.client.name"
+                  :src="selectedConversation.other_participant.image_url"
+                  :alt="selectedConversation.other_participant.name"
                   class="h-10 w-10 rounded-full object-cover"
                 />
               </div>
               <div v-else class="h-10 w-10 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center mr-3">
-                {{ getInitials(selectedConversation.client?.name || 'Usuario') }}
+                {{ getInitials(selectedConversation.other_participant?.name || 'Usuario') }}
               </div>
               
               <div>
-                <h3 class="font-medium">{{ selectedConversation.client?.name || 'Usuario' }}</h3>
-                <p class="text-xs text-gray-500">{{ selectedConversation.client?.email || '' }}</p>
+                <h3 class="font-medium">{{ selectedConversation.other_participant?.name || 'Usuario' }}</h3>
+                <p class="text-xs text-gray-500">{{ selectedConversation.other_participant?.title || '' }}</p>
               </div>
             </div>
           </div>
@@ -118,7 +115,7 @@
                 <div 
                   class="max-w-[75%] rounded-lg p-3 mb-1"
                   :class="[
-                    isMessageFromCurrentUser(message) ? 
+                    message.is_from_me ? 
                       'bg-primary-100 text-primary-800 self-end' : 
                       'bg-white border border-gray-200 self-start'
                   ]"
@@ -129,7 +126,7 @@
                 <!-- Timestamp -->
                 <div 
                   class="text-xs text-gray-500 mb-2"
-                  :class="[isMessageFromCurrentUser(message) ? 'self-end' : 'self-start']"
+                  :class="[message.is_from_me ? 'self-end' : 'self-start']"
                 >
                   {{ formatMessageTime(message.timestamp) }}
                 </div>
@@ -172,8 +169,7 @@ import { ref, nextTick, onMounted, watch } from 'vue'
 import { MessageCircle } from 'lucide-vue-next'
 import { useMessaging } from '~/composables/useMessaging'
 import { useNotifications } from '~/composables/useNotifications'
-import { useAuth } from '~/composables/useAuth'
-import { isMessageFromUser } from '~/types/message'
+import type { Conversation } from '~/types/message'
 
 definePageMeta({
   middleware: ['lawyer-auth']
@@ -192,15 +188,14 @@ const {
   markConversationAsRead
 } = useMessaging()
 
-const { success, error: showError } = useNotifications()
-const { user } = useAuth()
+const { error: showError } = useNotifications()
 
-const selectedConversation = ref(null)
+const selectedConversation = ref<Conversation | null>(null)
 const newMessage = ref('')
-const messagesContainer = ref(null)
+const messagesContainer = ref<HTMLElement | null>(null)
 
 // Select a conversation
-const selectConversation = async (conversation) => {
+const selectConversation = async (conversation: any) => {
   selectedConversation.value = conversation
   
   // Clear new message when changing conversations
@@ -212,9 +207,8 @@ const selectConversation = async (conversation) => {
       await fetchMessages(conversation.id)
       
       // Mark conversation as read
-      if (conversation.unreadCount) {
-        await markConversationAsRead(conversation.id)
-      }
+      // Note: unread count no longer tracked at conversation level
+      await markConversationAsRead(conversation.id)
       
       // Scroll to bottom after messages load
       await nextTick()
@@ -248,18 +242,7 @@ const scrollToBottom = () => {
   }
 }
 
-// Check if message is from current user (lawyer)
-const isMessageFromCurrentUser = (message: any) => {
-  if (!user.value) return false
-  
-  // Use new user ID logic if available
-  if (message.user_id_from) {
-    return message.user_id_from === user.value.id
-  }
-  
-  // Fallback to old from_lawyer logic for backward compatibility
-  return message.from_lawyer
-}
+// No need for complex logic anymore - just use is_from_me!
 
 // Get initials from a name
 const getInitials = (name: string) => {

@@ -21,24 +21,17 @@ export function useMessaging() {
     try {
       const response = await messagingService.getConversations();
 
-      // Transform the API response to match expected structure
-      // Note: API returns "lawyer" field which is actually the client from lawyer's perspective
+      // Transform the API response to match new simplified structure
       conversations.value = (response || []).map((conversation: any): Conversation => ({
         id: conversation.id,
-        client: {
-          id: conversation.lawyer?.id || conversation.lawyer?.user_id || "",
-          name: conversation.lawyer?.name || "Unknown",
-          email: conversation.lawyer?.email || "",
-          imageUrl: conversation.lawyer?.image_url || undefined,
+        other_participant: {
+          id: conversation.other_participant?.id || "",
+          name: conversation.other_participant?.name || "Unknown",
+          title: conversation.other_participant?.title || undefined,
+          image_url: conversation.other_participant?.image_url || undefined,
         },
-        lawyer: {
-          user_id: conversation.lawyer?.user_id || "",
-          name: conversation.lawyer?.name || "Unknown", 
-          email: conversation.lawyer?.email || "",
-        },
-        lastMessage: conversation.last_message || "",
-        lastMessageDate: conversation.last_message_date || new Date().toISOString(),
-        unreadCount: conversation.unread_count || 0,
+        last_message: conversation.last_message || "",
+        last_message_date: conversation.last_message_date || new Date().toISOString(),
       }));
 
       return conversations.value;
@@ -59,18 +52,15 @@ export function useMessaging() {
     try {
       const response = await messagingService.getMessages(conversationId);
 
-      // Transform the API response to match expected structure
+      // Transform the API response to match new simplified structure
       currentMessages.value = (response || []).map((message: any): Message => ({
         id: message.id,
         conversation_id: message.conversation_id || conversationId,
+        sender_id: message.sender_id || "",
         content: message.content || "",
-        user_id_from: message.user_id_from || "",
-        user_id_to: message.user_id_to || "",
-        from_lawyer: message.from_lawyer ?? false, // Keep for backward compatibility
+        is_from_me: message.is_from_me || false,
         read: message.read || false,
         timestamp: message.timestamp || new Date().toISOString(),
-        created_at: message.created_at || new Date().toISOString(),
-        updated_at: message.updated_at || new Date().toISOString(),
       }));
 
       return currentMessages.value;
@@ -89,21 +79,17 @@ export function useMessaging() {
     try {
       const response = await messagingService.sendMessage(conversationId, {
         content,
-        user_id: user.value?.id || "",
       });
 
-      // Transform the API response to match expected structure
+      // Transform the API response to match new simplified structure
       const newMessage: Message = {
         id: (response as any).id || `temp-${Date.now()}`,
         conversation_id: conversationId,
+        sender_id: user.value?.id || "",
         content: content,
-        user_id_from: user.value?.id || "",
-        user_id_to: (response as any).user_id_to || "",
-        from_lawyer: true, // Current user (lawyer) is sending this message
+        is_from_me: true, // Current user is sending this message
         read: false,
         timestamp: (response as any).timestamp || new Date().toISOString(),
-        created_at: (response as any).created_at || new Date().toISOString(),
-        updated_at: (response as any).updated_at || new Date().toISOString(),
       };
 
       // Add the new message to the current messages
@@ -114,8 +100,8 @@ export function useMessaging() {
         (c) => c.id === conversationId
       );
       if (conversationIndex !== -1) {
-        conversations.value[conversationIndex].lastMessage = content;
-        conversations.value[conversationIndex].lastMessageDate =
+        conversations.value[conversationIndex].last_message = content;
+        conversations.value[conversationIndex].last_message_date =
           newMessage.timestamp;
 
         // Move this conversation to the top of the list
@@ -142,9 +128,8 @@ export function useMessaging() {
       const conversationIndex = conversations.value.findIndex(
         (c) => c.id === conversationId
       );
-      if (conversationIndex !== -1) {
-        conversations.value[conversationIndex].unreadCount = 0;
-      }
+      // Note: unread_count no longer exists in new API structure
+      // Individual message read status is handled by the backend
 
       return response;
     } catch (err) {

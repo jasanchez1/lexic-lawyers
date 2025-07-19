@@ -1,54 +1,32 @@
 export interface Message {
   id: string;
   conversation_id: string;
+  sender_id: string;        // Who sent this message
   content: string;
-  user_id_from: string;  // ID of message sender
-  user_id_to: string;    // ID of message recipient
-  from_lawyer: boolean;  // Kept for backward compatibility
+  is_from_me: boolean;      // Did current user send this?
   read: boolean;
   timestamp: string;
-  created_at: string;
-  updated_at: string;
+}
+
+export interface ParticipantData {
+  id: string;
+  name: string;
+  title?: string;
+  image_url?: string;
 }
 
 export interface Conversation {
   id: string;
-  client: {
-    id: string;
-    name: string;
-    email: string;
-    imageUrl?: string;
-  };
-  lawyer: {
-    user_id: string;
-    name: string;
-    email: string;
-  };
-  lastMessage: string;
-  lastMessageDate: string;
-  unreadCount: number;
+  other_participant: ParticipantData;  // The other person in this conversation
+  last_message: string;
+  last_message_date: string;
 }
 
 export interface MessageSendRequest {
   content: string;
-  user_id: string;
 }
 
-// Helper function to determine message direction using new user ID fields
-export function isMessageFromUser(message: Message, currentUserId: string): boolean {
-  // Prefer new explicit user IDs
-  if (message.user_id_from) {
-    return message.user_id_from === currentUserId;
-  }
-  // Fallback to old from_lawyer logic for backward compatibility
-  return !message.from_lawyer;
-}
-
-export function isMessageFromLawyer(message: Message, lawyerId: string): boolean {
-  // Prefer new explicit user IDs
-  if (message.user_id_from) {
-    return message.user_id_from === lawyerId;
-  }
-  // Fallback to old from_lawyer logic for backward compatibility
-  return message.from_lawyer;
+// Simple helper - no more complex logic needed!
+export function isMessageFromCurrentUser(message: Message): boolean {
+  return message.is_from_me;
 }
