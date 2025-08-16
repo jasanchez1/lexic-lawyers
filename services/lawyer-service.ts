@@ -42,6 +42,17 @@ export class LawyerService extends ApiService {
     );
   }
 
+  // Upload lawyer profile image
+  async uploadLawyerImage(lawyerId: string, imageFile: File) {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    return this.requestFormData<{image_url: string}>(
+      `/lawyers/${lawyerId}/image`,
+      "POST",
+      formData
+    );
+  }
+
   // Education endpoints
   async createLawyerEducation(lawyerId: string, data: Education) {
     return this.request<Education>(

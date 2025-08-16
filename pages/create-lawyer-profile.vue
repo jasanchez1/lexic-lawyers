@@ -238,13 +238,17 @@
               </div>
 
               <div>
-                <label for="image-url" class="block text-sm font-medium text-gray-700 mb-1">
-                  URL de Foto de Perfil
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Foto de Perfil
                 </label>
-                <input id="image-url" v-model="formData.image_url" type="url" class="form-input"
-                  placeholder="https://ejemplo.com/mi-foto.jpg" />
+                <UiFileUpload 
+                  v-model="formData.profileImage" 
+                  label="Sube tu foto de perfil profesional"
+                  acceptedFormats=".jpg,.jpeg,.png,.webp"
+                  :maxSizeInMB="5"
+                />
                 <p class="mt-1 text-xs text-gray-500">
-                  Ingrese la URL de una foto profesional para su perfil.
+                  Formato JPG, PNG o WebP. Máximo 5MB. Esta imagen será visible en tu perfil público.
                 </p>
               </div>
             </div>
@@ -431,7 +435,7 @@ const formData = ref({
   phone: '',
   city: '',
   bio: '',
-  image_url: '', // Use API naming conventions
+  profileImage: null as File | null, // File for upload
   coverImageUrl: '',
   professionalStartDate: '',
   languages: ['Español'],
@@ -598,7 +602,7 @@ const submitForm = async () => {
       experience_score: area.experience_score
     }));
 
-    // Prepare the data for the API
+    // Prepare the data for the API (without image_url initially)
     const lawyerData = {
       name: formData.value.name,
       title: formData.value.title,
@@ -606,19 +610,29 @@ const submitForm = async () => {
       phone: formData.value.phone,
       city: formData.value.city,
       bio: formData.value.bio,
-      image_url: formData.value.image_url,
       professional_start_date: formattedStartDate,
       languages,
       // Only send required fields for areas
       areas: transformedAreas,
       // Pass the user ID if available
-      user_id: user.value?.id
+      user_id: user.value?.id || undefined
     };
 
     // Create the lawyer profile using the LawyerService
     const response = await lawyerService.createLawyer(lawyerData);
-    // If lawyer creation was successful, upload documents
+    // If lawyer creation was successful, upload documents and image
     if (response && response.id) {
+      // Upload profile image if provided
+      if (formData.value.profileImage) {
+        try {
+          const imageResponse = await lawyerService.uploadLawyerImage(response.id, formData.value.profileImage);
+          console.log('Profile image uploaded successfully:', imageResponse.image_url);
+        } catch (imageErr) {
+          console.error('Error uploading profile image:', imageErr);
+          showError('Aviso', 'Tu perfil se creó correctamente, pero hubo un problema al subir la imagen. Puedes subirla más tarde desde tu perfil.');
+        }
+      }
+
       // Upload documents
       const docsUploaded = await uploadLawyerDocuments(response.id);
 
@@ -662,7 +676,7 @@ const uploadLawyerDocuments = async (lawyerId: string) => {
     formDataSupremeCourt.append('document_types', 'supreme_court_certificate');
 
     // Upload Supreme Court Certificate
-    const supremeCourtResult = await lawyerService.uploadLawyerDocument(lawyerId, formDataSupremeCourt);
+    await lawyerService.uploadLawyerDocument(lawyerId, formDataSupremeCourt);
 
     // Create FormData for University Degree
     const formDataUniversity = new FormData();
@@ -670,7 +684,7 @@ const uploadLawyerDocuments = async (lawyerId: string) => {
     formDataUniversity.append('document_types', 'university_degree');
 
     // Upload University Degree
-    const universityResult = await lawyerService.uploadLawyerDocument(lawyerId, formDataUniversity);
+    await lawyerService.uploadLawyerDocument(lawyerId, formDataUniversity);
 
     success('Documentos subidos', 'Sus documentos han sido cargados y serán verificados por nuestro equipo.');
     return true;
