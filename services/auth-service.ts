@@ -79,6 +79,90 @@ export class AuthService extends ApiService {
       return false;
     }
   }
+
+  async requestPasswordReset(email: string): Promise<{success: boolean, message: string}> {
+    try {
+      const url = `${this.getBaseUrl()}/password-reset/request`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email }),
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Error al solicitar restablecimiento de contraseña');
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Password reset request error:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Error al solicitar restablecimiento de contraseña');
+    }
+  }
+
+  async validatePasswordResetToken(token: string): Promise<{success: boolean, message: string, expires_at?: string}> {
+    try {
+      const url = `${this.getBaseUrl()}/password-reset/validate-token`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ token }),
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Token inválido o expirado');
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Token validation error:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Token inválido o expirado');
+    }
+  }
+
+  async confirmPasswordReset(token: string, newPassword: string): Promise<{success: boolean, message: string}> {
+    try {
+      const url = `${this.getBaseUrl()}/password-reset/confirm`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ token, new_password: newPassword }),
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Error al restablecer contraseña');
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Password reset confirmation error:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Error al restablecer contraseña');
+    }
+  }
 }
 
 // Create a singleton instance
