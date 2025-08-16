@@ -16,16 +16,32 @@
       <!-- Profile Header with Cover Photo and Avatar -->
       <div class="bg-white rounded-lg shadow-sm border overflow-hidden mb-6">
         <div class="h-48 bg-primary-100 relative">
-          <img v-if="profile.coverImageUrl" :src="profile.coverImageUrl" alt="Cover photo"
-            class="w-full h-full object-cover" />
 
           <div class="absolute left-6 -bottom-16">
-            <div class="w-32 h-32 rounded-lg bg-white shadow-md overflow-hidden border-4 border-white">
-              <img v-if="profile.image_url" :src="profile.image_url" :alt="profile.name"
+            <div class="w-32 h-32 rounded-lg bg-white shadow-md overflow-hidden border-4 border-white relative group">
+              <!-- Show new image immediately if selected, otherwise show current profile image -->
+              <img v-if="editForm.profileImageFile" :src="editForm.profileImagePreview" :alt="profile.name"
+                class="w-full h-full object-cover" />
+              <img v-else-if="profile.image_url" :src="profile.image_url" :alt="profile.name"
                 class="w-full h-full object-cover" />
               <div v-else
                 class="w-full h-full bg-primary-100 flex items-center justify-center text-primary-800 text-4xl font-bold">
                 {{ profile.name.charAt(0) }}
+              </div>
+              
+              <!-- Edit overlay (only show in edit mode) -->
+              <div v-if="editMode" 
+                   @click="showImageModal = true"
+                   class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                <Edit class="w-8 h-8 text-white" />
+              </div>
+              
+              <!-- New image indicator -->
+              <div v-if="editMode && editForm.profileImageFile" 
+                   class="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
               </div>
             </div>
           </div>
@@ -252,26 +268,6 @@
               <textarea id="bio" v-model="editForm.bio" rows="6" class="form-input"></textarea>
             </div>
 
-            <!-- Images -->
-            <div>
-              <h3 class="text-lg font-bold mb-4">Imágenes</h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label for="imageUrl" class="block text-sm font-medium text-gray-700 mb-1">
-                    URL de Foto de Perfil
-                  </label>
-                  <input id="imageUrl" v-model="editForm.imageUrl" type="text" class="form-input"
-                    placeholder="https://ejemplo.com/foto.jpg" />
-                </div>
-                <div>
-                  <label for="coverImageUrl" class="block text-sm font-medium text-gray-700 mb-1">
-                    URL de Foto de Portada
-                  </label>
-                  <input id="coverImageUrl" v-model="editForm.coverImageUrl" type="text" class="form-input"
-                    placeholder="https://ejemplo.com/portada.jpg" />
-                </div>
-              </div>
-            </div>
 
             <!-- Areas of Practice -->
             <div>
@@ -340,6 +336,67 @@
         </form>
       </div>
     </template>
+
+    <!-- Image Upload Modal -->
+    <UiModal v-model="showImageModal" title="Cambiar Foto de Perfil">
+      <div class="space-y-4">
+        <!-- Current image preview -->
+        <div v-if="profile.image_url || editForm.profileImageFile" class="flex justify-center">
+          <div class="w-32 h-32 rounded-lg overflow-hidden bg-gray-100 shadow-md">
+            <img 
+              v-if="editForm.profileImageFile" 
+              :src="editForm.profileImagePreview" 
+              alt="Nueva imagen de perfil" 
+              class="w-full h-full object-cover"
+            />
+            <img 
+              v-else-if="profile.image_url" 
+              :src="profile.image_url" 
+              :alt="profile.name" 
+              class="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+        
+        <!-- File upload -->
+        <div>
+          <UiFileUpload 
+            v-model="editForm.profileImageFile" 
+            label="Seleccionar nueva imagen"
+            acceptedFormats=".jpg,.jpeg,.png,.webp"
+            :maxSizeInMB="5"
+          />
+          <p class="mt-2 text-xs text-gray-500 text-center">
+            Formato JPG, PNG o WebP. Máximo 5MB.
+          </p>
+          <div v-if="editForm.profileImageFile" class="mt-3 p-2 bg-blue-50 rounded-md">
+            <p class="text-xs text-blue-700 text-center">
+              <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              La imagen se guardará cuando hagas clic en "Guardar Cambios"
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <button 
+          type="button" 
+          @click="clearImageSelection"
+          class="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+        >
+          Quitar imagen
+        </button>
+        <button 
+          type="button" 
+          @click="showImageModal = false"
+          class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+        >
+          {{ editForm.profileImageFile ? 'Aceptar selección' : 'Cerrar' }}
+        </button>
+      </template>
+    </UiModal>
   </div>
 </template>
 
@@ -347,12 +404,13 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import {
   Star, Mail, Phone, MapPin, Briefcase,
-  GraduationCap, Award, Trash2
+  GraduationCap, Award, Trash2, Edit
 } from 'lucide-vue-next'
 import { useProfile } from '~/composables/useProfile'
 import { useNotifications } from '~/composables/useNotifications'
 import { usePracticeAreas } from '~/composables/usePracticeAreas'
 import { useAuth } from '~/composables/useAuth'
+import { useLawyerService } from '~/services/lawyer-service'
 import ProfileDocumentManagement from '~/components/profile/DocumentManagement.vue'
 import { useExperienceLevels } from '~/composables/useExperienceLevels'
 
@@ -363,11 +421,13 @@ definePageMeta({
 // State
 const editMode = ref(false)
 const isSubmitting = ref(false)
+const showImageModal = ref(false)
 const { user } = useAuth()
 const { profile, education, workExperience, achievements, isLoading, error, fetchProfile, updateProfile, fetchExperience } = useProfile()
 const { success, error: showError } = useNotifications()
 const { practiceAreas } = usePracticeAreas()
 const { experienceLevels, getExperienceLevelName, getExperienceLevelDescription, mapToNearestLevel } = useExperienceLevels()
+const lawyerService = useLawyerService()
 
 // Update the watch function that initializes editForm
 watch(profile, newProfile => {
@@ -379,8 +439,8 @@ watch(profile, newProfile => {
       phone: newProfile.phone || '',
       city: newProfile.city || '',
       bio: newProfile.bio || '',
-      imageUrl: newProfile.image_url || '',
-      coverImageUrl: newProfile.coverImageUrl || '',
+      profileImageFile: null,
+      profileImagePreview: '',
       languages: [...(newProfile.languages || [])],
       areas: [...(newProfile.areas || []).map(area => ({
         ...area,
@@ -402,8 +462,8 @@ const editForm = ref({
   phone: '',
   city: '',
   bio: '',
-  imageUrl: '',
-  coverImageUrl: '',
+  profileImageFile: null as File | null,
+  profileImagePreview: '',
   languages: [],
   areas: []
 })
@@ -421,26 +481,8 @@ const availablePracticeAreas = computed(() => {
   )
 })
 
-// Initialize edit form when profile loaded
-watch(profile, newProfile => {
-  if (newProfile) {
-    editForm.value = {
-      name: newProfile.name || '',
-      title: newProfile.title || '',
-      email: newProfile.email || '',
-      phone: newProfile.phone || '',
-      city: newProfile.city || '',
-      bio: newProfile.bio || '',
-      imageUrl: newProfile.image_url || '',
-      coverImageUrl: newProfile.coverImageUrl || '',
-      languages: [...(newProfile.languages || [])],
-      areas: [...(newProfile.areas || []).map(area => ({ ...area }))]
-    }
-
-    // Update languages input
-    languagesInput.value = (newProfile.languages || []).join(', ')
-  }
-})
+// Initialize edit form when profile loaded (duplicate watch - removing)
+// This watch is handled above
 
 // Add a new practice area
 const addArea = () => {
@@ -465,6 +507,39 @@ const removeArea = (index: number) => {
   editForm.value.areas.splice(index, 1)
 }
 
+// Handle image file selection
+watch(() => editForm.value.profileImageFile, (newFile) => {
+  if (newFile) {
+    // Create preview URL
+    editForm.value.profileImagePreview = URL.createObjectURL(newFile)
+  } else {
+    // Clean up previous preview URL
+    if (editForm.value.profileImagePreview) {
+      URL.revokeObjectURL(editForm.value.profileImagePreview)
+      editForm.value.profileImagePreview = ''
+    }
+  }
+})
+
+// Clear image selection
+const clearImageSelection = () => {
+  if (editForm.value.profileImagePreview) {
+    URL.revokeObjectURL(editForm.value.profileImagePreview)
+  }
+  editForm.value.profileImageFile = null
+  editForm.value.profileImagePreview = ''
+}
+
+// Clean up when exiting edit mode
+watch(editMode, (newEditMode) => {
+  if (!newEditMode) {
+    // Clean up image preview when exiting edit mode
+    clearImageSelection()
+    // Close image modal
+    showImageModal.value = false
+  }
+})
+
 // Save profile changes
 const saveProfile = async () => {
   isSubmitting.value = true
@@ -481,6 +556,19 @@ const saveProfile = async () => {
       experience_score: area.experience_score
     }))
 
+    // Handle image upload if there's a new file
+    let imageUrl = profile.value?.image_url || '';
+    if (editForm.value.profileImageFile && profile.value?.id) {
+      try {
+        const imageResponse = await lawyerService.uploadLawyerImage(profile.value.id, editForm.value.profileImageFile)
+        imageUrl = imageResponse.image_url
+      } catch (imageErr) {
+        console.error('Error uploading profile image:', imageErr)
+        showError('Error al subir imagen', 'Hubo un problema al subir la imagen. Los demás cambios se guardarán.')
+        // Continue with profile update even if image upload fails
+      }
+    }
+
     // Prepare update data
     const updateData = {
       name: editForm.value.name,
@@ -489,14 +577,16 @@ const saveProfile = async () => {
       phone: editForm.value.phone,
       city: editForm.value.city,
       bio: editForm.value.bio,
-      image_url: editForm.value.imageUrl,
+      image_url: imageUrl,
       languages,
       areas: transformedAreas // Use the transformed areas
     }
 
-
     // Update profile
     await updateProfile(updateData)
+
+    // Clean up image preview
+    clearImageSelection()
 
     // Exit edit mode
     editMode.value = false

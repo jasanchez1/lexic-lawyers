@@ -70,7 +70,6 @@ export interface Lawyer {
   city?: string;
   imageURL?: string;
   image_url?: string;
-  coverImageUrl?: string;
   languages?: string[];
   professionalStartDate?: string;
   areas: PracticeArea[];

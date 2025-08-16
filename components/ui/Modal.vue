@@ -1,6 +1,7 @@
 <template>
-    <Teleport to="body">
-      <Transition
+    <ClientOnly>
+      <Teleport to="body">
+        <Transition
         enter-active-class="ease-out duration-300"
         enter-from-class="opacity-0"
         enter-to-class="opacity-100"
@@ -65,7 +66,8 @@
           </div>
         </div>
       </Transition>
-    </Teleport>
+      </Teleport>
+    </ClientOnly>
   </template>
   
   <script setup lang="ts">
@@ -128,10 +130,13 @@
   
   // Prevent scrolling of the body when modal is open
   watch(() => props.modelValue, (value) => {
-    if (value) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
+    // Only run on client side
+    if (process.client) {
+      if (value) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = '';
+      }
     }
   }, { immediate: true });
   </script>

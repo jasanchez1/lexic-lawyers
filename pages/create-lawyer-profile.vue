@@ -436,7 +436,6 @@ const formData = ref({
   city: '',
   bio: '',
   profileImage: null as File | null, // File for upload
-  coverImageUrl: '',
   professionalStartDate: '',
   languages: ['Español'],
   areas: [],
