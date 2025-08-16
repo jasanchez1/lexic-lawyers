@@ -12,9 +12,10 @@ import { processAuthTransfer } from '~/utils/auth-transfer'
 // State that will be shared between component instances
 const isAuthenticated = ref(false)
 const isLawyer = ref(false)
-const user = ref(null)
+const user = ref<any>(null)
+const lawyerProfile = ref<any>(null)
 const isLoading = ref(true)
-const error = ref(null)
+const error = ref<string | null>(null)
 
 export function useAuth() {
   // Function to get the AuthService inside a component context
@@ -31,12 +32,12 @@ export function useAuth() {
       const authService = getAuthService();
       const response = await authService.login(email, password)
       
-      if (response.access_token) {
+      if (response.access_token || response.accessToken) {
         // Store tokens in localStorage in the same format as main site
         storeTokens(
-          response.access_token, 
-          response.refresh_token,
-          response.expires_in
+          response.access_token || response.accessToken, 
+          response.refresh_token || response.refreshToken,
+          response.expires_in || response.expiresIn
         )
         
         // Get user info
@@ -85,6 +86,7 @@ export function useAuth() {
       
       // Clear user data regardless of API call success
       user.value = null
+      lawyerProfile.value = null
       isAuthenticated.value = false
       isLawyer.value = false
       isLoading.value = false
@@ -100,7 +102,20 @@ export function useAuth() {
       user.value = userData
       
       // Check if user has lawyer profile
-      isLawyer.value = userData.is_lawyer || userData.isLawyer
+      isLawyer.value = userData.is_lawyer || userData.isLawyer || false
+      
+      // If user is a lawyer and has a lawyer_id, fetch lawyer profile data
+      const lawyerId = userData.lawyer_id || userData.lawyerId;
+      if (isLawyer.value && lawyerId) {
+        try {
+          const lawyerService = getLawyerService();
+          const lawyerData = await lawyerService.getLawyerProfile(lawyerId)
+          lawyerProfile.value = lawyerData
+        } catch (lawyerErr) {
+          console.error('Error fetching lawyer profile:', lawyerErr)
+          // Don't fail the whole auth process if lawyer profile fetch fails
+        }
+      }
       
       return userData
     } catch (err) {
@@ -189,13 +204,13 @@ export function useAuth() {
       const authService = getAuthService();
       const response = await authService.refreshToken(refreshToken)
       
-      if (response.access_token && response.refresh_token) {
+      if ((response.access_token || response.accessToken) && (response.refresh_token || response.refreshToken)) {
         console.log('Token refresh successful, storing new tokens')
         // Store the new tokens
         storeTokens(
-          response.access_token,
-          response.refresh_token,
-          response.expires_in
+          response.access_token || response.accessToken,
+          response.refresh_token || response.refreshToken,
+          response.expires_in || response.expiresIn
         )
         
         // Get user info
@@ -214,6 +229,7 @@ export function useAuth() {
       clearTokens()
       isAuthenticated.value = false
       isLawyer.value = false
+      lawyerProfile.value = null
       return false
     }
   }
@@ -225,6 +241,7 @@ export function useAuth() {
 
   return {
     user: readonly(user),
+    lawyerProfile: readonly(lawyerProfile),
     isAuthenticated: readonly(isAuthenticated),
     isLawyer: readonly(isLawyer),
     isLoading: readonly(isLoading),

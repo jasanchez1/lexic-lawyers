@@ -77,10 +77,20 @@
             class="flex items-center text-gray-700 hover:text-primary-600 transition-colors"
             @click="isUserMenuOpen = !isUserMenuOpen"
           >
-            <div
-              class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 mr-2"
-            >
-              {{ userInitials }}
+            <div class="w-8 h-8 rounded-full mr-2 overflow-hidden">
+              <img 
+                v-if="lawyerProfile?.image_url" 
+                :src="lawyerProfile.image_url" 
+                :alt="`Foto de perfil de ${user?.first_name || 'Usuario'}`"
+                class="w-full h-full object-cover"
+                @error="onImageError"
+              />
+              <div
+                v-else
+                class="w-full h-full bg-primary-100 flex items-center justify-center text-primary-600"
+              >
+                {{ userInitials }}
+              </div>
             </div>
             <span class="mr-1">{{ user?.first_name || 'Usuario' }}</span>
             <ChevronDown
@@ -120,7 +130,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Menu, Bell, ChevronDown, MessageCircle, Eye, AlertCircle, Clock } from 'lucide-vue-next'
 import { onClickOutside } from '@vueuse/core'
 import { useAuth } from '~/composables/useAuth'
@@ -129,7 +139,7 @@ import { useRecentActivity } from '~/composables/useRecentActivity'
 const emit = defineEmits(['toggle-sidebar'])
 const userMenuRef = ref(null)
 const isUserMenuOpen = ref(false)
-const { user, logout } = useAuth()
+const { user, lawyerProfile, logout } = useAuth()
 
 // Get real activity data
 const { activities, isLoading, fetchRecentActivity } = useRecentActivity()
@@ -158,7 +168,7 @@ const toggleNotifications = () => {
 }
 
 // Handle activity click
-const handleActivityClick = (activity) => {
+const handleActivityClick = (activity: any) => {
   // Close dropdown
   showNotifications.value = false
   
@@ -169,7 +179,7 @@ const handleActivityClick = (activity) => {
 }
 
 // Format time
-const formatTime = (timestamp) => {
+const formatTime = (timestamp: any) => {
   const date = new Date(timestamp)
   
   // If today, show only time
@@ -206,7 +216,7 @@ const formatTime = (timestamp) => {
 }
 
 // Get activity icon
-const getActivityIcon = (type) => {
+const getActivityIcon = (type: string) => {
   const icons = {
     message: MessageCircle,
     view: Eye,
@@ -214,11 +224,11 @@ const getActivityIcon = (type) => {
     click: Clock
   }
   
-  return icons[type] || AlertCircle
+  return icons[type as keyof typeof icons] || AlertCircle
 }
 
 // Get activity icon background class
-const getActivityIconClass = (type) => {
+const getActivityIconClass = (type: string) => {
   const classes = {
     message: 'bg-green-50 text-green-600',
     view: 'bg-blue-50 text-blue-600',
@@ -226,7 +236,7 @@ const getActivityIconClass = (type) => {
     click: 'bg-purple-50 text-purple-600'
   }
   
-  return classes[type] || 'bg-gray-50 text-gray-600'
+  return classes[type as keyof typeof classes] || 'bg-gray-50 text-gray-600'
 }
 
 // Close dropdowns when clicking outside
@@ -252,5 +262,11 @@ const userInitials = computed(() => {
 const handleLogout = async () => {
   await logout()
   navigateTo('/login')
+}
+
+// Handle image loading error
+const onImageError = (event: any) => {
+  // Hide the image and show initials fallback
+  event.target.style.display = 'none'
 }
 </script>
