@@ -283,18 +283,74 @@
                 </p>
               </div>
 
-              <div v-if="!formData.supremeCourtCertificate || !formData.universityDegree"
-                class="bg-yellow-50 p-4 rounded-md">
+              <!-- Legal Acceptance Section -->
+              <div class="border-t pt-8">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Términos y Condiciones</h3>
+                
+                <!-- Terms and Conditions Checkbox -->
+                <div class="space-y-4">
+                  <div class="flex items-start">
+                    <div class="flex items-center h-5">
+                      <input 
+                        id="terms-checkbox" 
+                        v-model="formData.acceptTermsAndConditions"
+                        type="checkbox" 
+                        class="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                      />
+                    </div>
+                    <div class="ml-3 text-sm">
+                      <label for="terms-checkbox" class="font-medium text-gray-700">
+                        Acepto los 
+                        <a href="#" @click.prevent="openTermsAndConditions" class="text-primary-600 hover:text-primary-700 underline">
+                          términos y condiciones
+                        </a> de Lexic *
+                      </label>
+                      <p class="text-gray-500 text-xs mt-1">
+                        Al marcar esta casilla, confirmo que he leído y acepto los términos y condiciones de uso de la plataforma Lexic.
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Data Processing Consent Checkbox -->
+                  <div class="flex items-start">
+                    <div class="flex items-center h-5">
+                      <input 
+                        id="data-consent-checkbox" 
+                        v-model="formData.acceptDataProcessingConsent"
+                        type="checkbox" 
+                        class="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                      />
+                    </div>
+                    <div class="ml-3 text-sm">
+                      <label for="data-consent-checkbox" class="font-medium text-gray-700">
+                        Acepto el 
+                        <a href="#" @click.prevent="openDataProcessingConsent" class="text-primary-600 hover:text-primary-700 underline">
+                          consentimiento de tratamiento de datos
+                        </a> *
+                      </label>
+                      <p class="text-gray-500 text-xs mt-1">
+                        Al marcar esta casilla, autorizo el tratamiento de mis datos personales según lo establecido en el documento de consentimiento.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="!formData.supremeCourtCertificate || !formData.universityDegree || !formData.acceptTermsAndConditions || !formData.acceptDataProcessingConsent"
+                class="bg-yellow-50 p-4 rounded-md mt-6">
                 <div class="flex">
                   <div class="flex-shrink-0">
                     <AlertCircle class="h-5 w-5 text-yellow-400" />
                   </div>
                   <div class="ml-3">
-                    <h3 class="text-sm font-medium text-yellow-800">Documentos requeridos</h3>
+                    <h3 class="text-sm font-medium text-yellow-800">Requisitos para completar el registro</h3>
                     <div class="mt-2 text-sm text-yellow-700">
-                      <p>
-                        Ambos documentos son necesarios para completar tu registro y verificar tu identidad profesional.
-                      </p>
+                      <ul class="list-disc pl-5 space-y-1">
+                        <li v-if="!formData.supremeCourtCertificate">Subir Certificado de Título de la Corte Suprema</li>
+                        <li v-if="!formData.universityDegree">Subir Certificado de Título Universitario</li>
+                        <li v-if="!formData.acceptTermsAndConditions">Aceptar términos y condiciones</li>
+                        <li v-if="!formData.acceptDataProcessingConsent">Aceptar consentimiento de tratamiento de datos</li>
+                      </ul>
                     </div>
                   </div>
                 </div>
@@ -382,7 +438,10 @@ const formData = ref({
   areas: [],
   // New document fields
   supremeCourtCertificate: null as File | null,
-  universityDegree: null as File | null
+  universityDegree: null as File | null,
+  // Legal acceptance fields
+  acceptTermsAndConditions: false,
+  acceptDataProcessingConsent: false
 });
 
 // For languages input (comma-separated)
@@ -415,7 +474,10 @@ const canProceed = computed(() => {
 
 // Can submit final step
 const canSubmitFinal = computed(() => {
-  return formData.value.supremeCourtCertificate && formData.value.universityDegree;
+  return formData.value.supremeCourtCertificate && 
+         formData.value.universityDegree && 
+         formData.value.acceptTermsAndConditions && 
+         formData.value.acceptDataProcessingConsent;
 });
 
 // Methods
@@ -617,6 +679,20 @@ const uploadLawyerDocuments = async (lawyerId: string) => {
     showError('Error', err instanceof Error ? err.message : 'Hubo un problema al subir sus documentos. Por favor, inténtelo más tarde.');
     return false;
   }
+};
+
+// Handle terms and conditions modal/page
+const openTermsAndConditions = () => {
+  // Open the existing TyC document
+  const tycUrl = '/documents/Lexic_TyC_24.06.2025.pdf';
+  window.open(tycUrl, '_blank');
+};
+
+// Handle data processing consent download
+const openDataProcessingConsent = () => {
+  // Download the existing data processing consent document
+  const consentUrl = '/documents/Consentimiento_Tratamiento_Datos.pdf';
+  window.open(consentUrl, '_blank');
 };
 
 // Load data on mount
