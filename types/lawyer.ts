@@ -79,6 +79,7 @@ export interface Lawyer {
   reviewScore: number;
   reviewCount: number;
   is_verified: boolean;
+  is_blocked?: boolean;
   review_score?: number;
   review_count?: number;
 }
